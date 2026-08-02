@@ -16,6 +16,7 @@ class Product {
   final String sellerName;
   final DateTime postedAt;
   final bool isFavorite;
+  final String description;
 
   const Product({
     required this.id,
@@ -26,6 +27,11 @@ class Product {
     required this.postedAt,
     required this.imageUrl,
     this.isFavorite = false,
+    // Default to an empty string rather than making this `required`.
+    // A real seller might genuinely leave the description blank when
+    // posting an item — the Detail page already knows how to show a
+    // fallback message in that case (see product_detail_page.dart).
+    this.description = '',
   });
 }
 
@@ -43,7 +49,11 @@ final List<Product> sampleProducts = [
     category: 'Textbooks',
     sellerName: 'JessePraise.',
     postedAt: DateTime.now().subtract(const Duration(hours: 3)),
-    imageUrl: 'assets/images/calculus.jpg'
+    imageUrl: 'assets/images/calculus.jpg',
+    description:
+        'Used for one semester in MATH 201. A few highlighted pages but '
+        'no torn or missing pages. Great condition otherwise. Selling '
+        'because I finished the course.',
   ),
   Product(
     id: '2',
@@ -52,7 +62,11 @@ final List<Product> sampleProducts = [
     category: 'Laptops',
     sellerName: 'Kwabs Laptops',
     postedAt: DateTime.now().subtract(const Duration(hours: 6)),
-    imageUrl: 'assets/images/laptop.jpg'
+    imageUrl: 'assets/images/laptop.jpg',
+    description:
+        'HP Pavilion, Core i5, 8GB RAM, 256GB SSD. Battery still holds a '
+        'good charge. Comes with the original charger. Upgrading to a new '
+        'machine, hence the sale.',
   ),
   Product(
     id: '3',
@@ -61,7 +75,10 @@ final List<Product> sampleProducts = [
     category: 'Calculators',
     sellerName: 'Efua B.',
     postedAt: DateTime.now().subtract(const Duration(days: 1)),
-    imageUrl: 'assets/images/calculus.jpg'
+    imageUrl: 'assets/images/calculus.jpg',
+    description:
+        'Brand new, still sealed in box. Bought two by mistake for the '
+        'same course. Standard model accepted for all engineering exams.',
   ),
   Product(
     id: '4',
@@ -70,7 +87,10 @@ final List<Product> sampleProducts = [
     category: 'Furniture',
     sellerName: 'Yaw M.',
     postedAt: DateTime.now().subtract(const Duration(days: 1, hours: 4)),
-    imageUrl: 'assets/images/hostelbed.jpg'
+    imageUrl: 'assets/images/hostelbed.jpg',
+    description:
+        'Sturdy wooden bedside table, two drawers. Some minor scuffs on '
+        'the legs but fully functional. Must be picked up from Hostel 4.',
   ),
   Product(
     id: '5',
@@ -79,7 +99,10 @@ final List<Product> sampleProducts = [
     category: 'Gaming',
     sellerName: 'Nana A.',
     postedAt: DateTime.now().subtract(const Duration(days: 2)),
-    imageUrl: 'assets/images/Joystick-ps4-greenurba.jpg'
+    imageUrl: 'assets/images/Joystick-ps4-greenurba.jpg',
+    // Left blank on purpose, as an example of a listing with no
+    // description — this is what triggers the fallback message on the
+    // Detail page.
   ),
   Product(
     id: '6',
@@ -88,6 +111,9 @@ final List<Product> sampleProducts = [
     category: 'Phones',
     sellerName: 'Abena S.',
     postedAt: DateTime.now().subtract(const Duration(days: 2, hours: 5)),
-    imageUrl: 'assets/images/iphone11-white.jpg'
+    imageUrl: 'assets/images/iphone11-white.jpg',
+    description:
+        'Battery health at 87%. Small scratch on the back glass, screen '
+        'is flawless. Comes with a case and unused screen protector.',
   ),
 ];

@@ -3,7 +3,7 @@ import '../../constants/categories.dart';
 import '../../models/product.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/bottom_nav_bar.dart';
-import 'product_detail_page.dart';
+import '../product_detail/product_detail_page.dart';
 
 /// The Home Page: the first screen a logged-in student sees.
 ///
