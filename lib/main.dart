@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'theme/dark_theme.dart';
-import 'pages/home/home_page.dart';
+import 'pages/splash/splash_page.dart';
 
 /// The very first function that runs when the app launches.
 /// runApp() takes a widget and makes it the root of the entire app.
@@ -24,7 +24,7 @@ class KrazeMarketplaceApp extends StatelessWidget {
       title: 'Kraze Marketplace',
       debugShowCheckedModeBanner: false, // hides the red "DEBUG" ribbon
       theme: darkTheme,
-      home: const HomePage(),
+      home: const SplashPage(),
     );
   }
 }

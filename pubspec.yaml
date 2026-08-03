@@ -20,3 +20,8 @@ flutter:
 
   assets:
   - assets/images/
+
+  fonts:
+    - family: Glitch
+      fonts:
+        - asset: assets/fonts/Doctor Glitch.otf
