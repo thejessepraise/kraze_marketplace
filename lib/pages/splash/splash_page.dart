@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../home/home_page.dart';
+import '../auth/login_page.dart';
 import '../../theme/app_colors.dart';
 
 /// The very first screen a student sees when the app launches — shows the
@@ -10,11 +10,16 @@ import '../../theme/app_colors.dart';
 /// A splash screen isn't just decoration — it's normally where an app
 /// does a bit of quick setup work before deciding where to send the user:
 /// checking "is this student already logged in?", loading saved settings,
-/// etc. Right now we don't have login/auth built yet, so this version
-/// just shows the branding for a moment and then goes straight to Home.
-/// Once auth exists, the logic in _goToNextScreen() below is exactly
-/// where "if logged in -> Home, else -> Login" would be added — the rest
-/// of this file wouldn't need to change.
+/// etc.
+///
+/// WHY THIS GOES TO LOGIN (not Home) NOW:
+/// Now that Login/Signup exist, Splash always sends the user to Login for
+/// the moment — there's no real "remember me" / persisted session yet
+/// (that needs Firebase Auth's own session-restore, or something like
+/// shared_preferences). Once that's wired up, _goToNextScreen() below is
+/// exactly where the real check goes: "if there's a saved, still-valid
+/// session -> go straight to Home; otherwise -> Login" — the rest of
+/// this file wouldn't need to change.
 ///
 /// WHY StatefulWidget:
 /// This screen needs to run some code automatically the moment it
@@ -51,14 +56,14 @@ class _SplashPageState extends State<SplashPage> {
     // Navigator on a screen that's already gone would crash the app.
     if (!mounted) return;
 
-    // pushReplacement (not push) swaps Splash out for Home entirely,
-    // rather than stacking Home on top of it. This means pressing the
-    // phone's back button on Home won't take the student back to the
+    // pushReplacement (not push) swaps Splash out for Login entirely,
+    // rather than stacking Login on top of it. This means pressing the
+    // phone's back button on Login won't take the student back to the
     // splash screen — exactly what you want, since there's nothing
     // useful to go "back" to on a splash screen.
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const HomePage()),
-    );
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginPage()));
   }
 
   @override
@@ -95,9 +100,8 @@ class _SplashPageState extends State<SplashPage> {
               child: const Text(
                 'K',
                 style: TextStyle(
-                  fontFamily: 'Glitch',
                   fontSize: 120,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w900,
                   // The actual color here doesn't matter — ShaderMask
                   // replaces it with the gradient above. It just needs
                   // to be opaque (not transparent) for the gradient to
