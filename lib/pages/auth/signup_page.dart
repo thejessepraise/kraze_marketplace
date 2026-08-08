@@ -9,7 +9,8 @@ import 'auth_widgets.dart';
 ///
 /// See login_page.dart for detailed comments on the overall pattern
 /// (Form + GlobalKey validation, StatefulWidget for controllers/loading,
-/// pushAndRemoveUntil on success) — this page follows the same approach.
+/// pushAndRemoveUntil on success, the ConstrainedBox width cap) — this
+/// page follows the same approach.
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
 
@@ -68,126 +69,132 @@ class _SignupPageState extends State<SignupPage> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const AuthHeader(),
-                const SizedBox(height: 8),
-                Text(
-                  'Sign Up',
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Row(
+          // Same width cap as Login — see that file's comment for why.
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    const AuthHeader(),
+                    const SizedBox(height: 8),
                     Text(
-                      'Already have an account? ',
+                      'Sign Up',
                       style: TextStyle(
-                        fontSize: 13,
-                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
                       ),
                     ),
-                    GestureDetector(
-                      // pop() (not push) — Signup was reached BY pushing
-                      // from Login, so popping just returns to that
-                      // existing Login screen rather than creating a
-                      // second one on top of it.
-                      onTap: () => Navigator.of(context).pop(),
-                      child: Text(
-                        'Sign In',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: colorScheme.primary,
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Text(
+                          'Already have an account? ',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
                         ),
-                      ),
+                        GestureDetector(
+                          // pop() (not push) — Signup was reached BY
+                          // pushing from Login, so popping just returns
+                          // to that existing Login screen rather than
+                          // creating a second one on top of it.
+                          onTap: () => Navigator.of(context).pop(),
+                          child: Text(
+                            'Sign In',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
+                    const SizedBox(height: 28),
+
+                    CustomTextField(
+                      hint: 'Full Name',
+                      controller: _nameController,
+                      prefixIcon: Icons.person_outline,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Enter your full name';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    CustomTextField(
+                      hint: 'Email Address',
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      prefixIcon: Icons.email_outlined,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Enter your email';
+                        }
+                        if (!value.contains('@')) {
+                          return 'Enter a valid email address';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    CustomTextField(
+                      hint: 'Create Password',
+                      controller: _passwordController,
+                      isPassword: true,
+                      prefixIcon: Icons.lock_outline,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Enter a password';
+                        }
+                        if (value.length < 6) {
+                          return 'Password must be at least 6 characters';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    CustomTextField(
+                      hint: 'Re-enter Password',
+                      controller: _confirmPasswordController,
+                      isPassword: true,
+                      prefixIcon: Icons.lock_outline,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Re-enter your password';
+                        }
+                        // Compares against the OTHER controller's current
+                        // text — this is why both fields need their own
+                        // TextEditingController rather than sharing one.
+                        if (value != _passwordController.text) {
+                          return 'Passwords do not match';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 24),
+
+                    CustomButton(
+                      label: 'Register',
+                      isLoading: _isLoading,
+                      onPressed: _handleSignup,
+                    ),
+                    const SizedBox(height: 20),
+
+                    const AuthDivider(label: 'Or sign up with'),
+                    const SizedBox(height: 20),
+                    const SocialSignInRow(),
+                    const SizedBox(height: 32),
                   ],
                 ),
-                const SizedBox(height: 28),
-
-                CustomTextField(
-                  hint: 'Full Name',
-                  controller: _nameController,
-                  prefixIcon: Icons.person_outline,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Enter your full name';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                CustomTextField(
-                  hint: 'Email Address',
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  prefixIcon: Icons.email_outlined,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Enter your email';
-                    }
-                    if (!value.contains('@')) {
-                      return 'Enter a valid email address';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                CustomTextField(
-                  hint: 'Create Password',
-                  controller: _passwordController,
-                  isPassword: true,
-                  prefixIcon: Icons.lock_outline,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Enter a password';
-                    }
-                    if (value.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                CustomTextField(
-                  hint: 'Re-enter Password',
-                  controller: _confirmPasswordController,
-                  isPassword: true,
-                  prefixIcon: Icons.lock_outline,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Re-enter your password';
-                    }
-                    // Compares against the OTHER controller's current
-                    // text — this is why both fields need their own
-                    // TextEditingController rather than sharing one.
-                    if (value != _passwordController.text) {
-                      return 'Passwords do not match';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-
-                CustomButton(
-                  label: 'Register',
-                  isLoading: _isLoading,
-                  onPressed: _handleSignup,
-                ),
-                const SizedBox(height: 20),
-
-                const AuthDivider(label: 'Or sign up with'),
-                const SizedBox(height: 20),
-                const SocialSignInRow(),
-                const SizedBox(height: 32),
-              ],
+              ),
             ),
           ),
         ),

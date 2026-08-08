@@ -25,27 +25,30 @@ class AuthHeader extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return SizedBox(
+      width: double.infinity, // <-- without this, the box shrinks to fit
+      // just the "K" text and hugs the left edge instead of centering
+      // across the available width.
       height: 180,
       child: Stack(
         alignment: Alignment.center,
         children: [
           // Small floating decorative dots, loosely echoing the little
           // doodles (stars/planet) in the reference design.
-          Positioned(
-            top: 20,
-            left: 40,
-            child: _dot(colorScheme.primary.withValues(alpha: 0.4), 10),
-          ),
-          Positioned(
-            top: 50,
-            right: 50,
-            child: _dot(AppColors.accentPrice.withValues(alpha: 0.35), 14),
-          ),
-          Positioned(
-            bottom: 24,
-            left: 70,
-            child: _dot(colorScheme.primary.withValues(alpha: 0.25), 8),
-          ),
+          // Positioned(
+          //   top: 20,
+          //   left: 40,
+          //   child: _dot(colorScheme.primary.withValues(alpha: 0.4), 10),
+          // ),
+          // Positioned(
+          //   top: 50,
+          //   right: 50,
+          //   child: _dot(AppColors.accentPrice.withValues(alpha: 0.35), 14),
+          // ),
+          // Positioned(
+          //   bottom: 24,
+          //   left: 70,
+          //   child: _dot(colorScheme.primary.withValues(alpha: 0.25), 8),
+          // ),
 
           // The gradient "K" mark, same technique as the splash screen.
           ShaderMask(
@@ -59,7 +62,7 @@ class AuthHeader extends StatelessWidget {
             child: const Text(
               'K',
               style: TextStyle(
-                fontSize: 72,
+                fontSize: 90,
                 fontWeight: FontWeight.w900,
                 color: Colors.white,
                 height: 1,
@@ -190,9 +193,7 @@ class _SocialButton extends StatelessWidget {
         foregroundColor: Colors.black87,
         padding: const EdgeInsets.symmetric(vertical: 14),
         side: const BorderSide(color: Color(0xFFE0E0E0)),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(30),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
       ),
       icon: Icon(icon, color: iconColor ?? Colors.black87, size: 20),
       label: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),

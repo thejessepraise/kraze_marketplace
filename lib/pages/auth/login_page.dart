@@ -80,117 +80,130 @@ class _LoginPageState extends State<LoginPage> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const AuthHeader(),
-                const SizedBox(height: 8),
-                Text(
-                  'Welcome Back',
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Row(
+          // Center + ConstrainedBox caps how wide the form can get. On a
+          // phone screen (narrower than 480), this has no visible effect
+          // — content just uses the available width like before. On a
+          // wide desktop/web window, it stops the pill fields and button
+          // from stretching edge-to-edge across the whole screen, and
+          // centers a sensible-width "card" instead — the same fix
+          // pattern used for Product Detail's wide layout.
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    const AuthHeader(),
+                    const SizedBox(height: 8),
                     Text(
-                      "Don't have an account? ",
+                      'Welcome Back',
                       style: TextStyle(
-                        fontSize: 13,
-                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
                       ),
                     ),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const SignupPage(),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Text(
+                          "Don't have an account? ",
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: colorScheme.onSurfaceVariant,
                           ),
-                        );
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const SignupPage(),
+                              ),
+                            );
+                          },
+                          child: Text(
+                            'Sign Up',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 28),
+
+                    CustomTextField(
+                      hint: 'Email Address',
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      prefixIcon: Icons.email_outlined,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Enter your email';
+                        }
+                        if (!value.contains('@')) {
+                          return 'Enter a valid email address';
+                        }
+                        return null;
                       },
-                      child: Text(
-                        'Sign Up',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: colorScheme.primary,
+                    ),
+                    const SizedBox(height: 16),
+                    CustomTextField(
+                      hint: 'Enter Password',
+                      controller: _passwordController,
+                      isPassword: true,
+                      prefixIcon: Icons.lock_outline,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Enter your password';
+                        }
+                        if (value.length < 6) {
+                          return 'Password must be at least 6 characters';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 24),
+
+                    CustomButton(
+                      label: 'Sign In',
+                      isLoading: _isLoading,
+                      onPressed: _handleLogin,
+                    ),
+                    const SizedBox(height: 14),
+
+                    Center(
+                      child: TextButton(
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content:
+                                  Text('Forgot Password page coming soon'),
+                            ),
+                          );
+                        },
+                        child: Text(
+                          'Forgot your password?',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: colorScheme.primary,
+                          ),
                         ),
                       ),
                     ),
+                    const SizedBox(height: 12),
+
+                    const AuthDivider(label: 'Or sign in with'),
+                    const SizedBox(height: 20),
+                    const SocialSignInRow(),
+                    const SizedBox(height: 32),
                   ],
                 ),
-                const SizedBox(height: 28),
-
-                CustomTextField(
-                  hint: 'Email Address',
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  prefixIcon: Icons.email_outlined,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Enter your email';
-                    }
-                    if (!value.contains('@')) {
-                      return 'Enter a valid email address';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                CustomTextField(
-                  hint: 'Enter Password',
-                  controller: _passwordController,
-                  isPassword: true,
-                  prefixIcon: Icons.lock_outline,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Enter your password';
-                    }
-                    if (value.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-
-                CustomButton(
-                  label: 'Sign In',
-                  isLoading: _isLoading,
-                  onPressed: _handleLogin,
-                ),
-                const SizedBox(height: 14),
-
-                Center(
-                  child: TextButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Forgot Password page coming soon'),
-                        ),
-                      );
-                    },
-                    child: Text(
-                      'Forgot your password?',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: colorScheme.primary,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                const AuthDivider(label: 'Or sign in with'),
-                const SizedBox(height: 20),
-                const SocialSignInRow(),
-                const SizedBox(height: 32),
-              ],
+              ),
             ),
           ),
         ),
