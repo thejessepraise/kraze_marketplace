@@ -42,9 +42,7 @@ class _HomePageState extends State<HomePage> {
     // we'd move it into product_service.dart.
     final List<Product> displayedProducts = _selectedCategory == 'All'
         ? sampleProducts
-        : sampleProducts
-            .where((p) => p.category == _selectedCategory)
-            .toList();
+        : sampleProducts.where((p) => p.category == _selectedCategory).toList();
 
     return Scaffold(
       // No explicit backgroundColor here anymore — Scaffold automatically
@@ -61,9 +59,7 @@ class _HomePageState extends State<HomePage> {
           slivers: [
             SliverToBoxAdapter(child: _buildTopBar()),
             SliverToBoxAdapter(child: _buildSearchBar()),
-            const SliverToBoxAdapter(
-    child: SizedBox(height: 12),
-  ),
+            const SliverToBoxAdapter(child: SizedBox(height: 12)),
             SliverToBoxAdapter(child: _buildCategoryRow()),
             SliverToBoxAdapter(child: _buildSectionTitle('Recent Listings')),
             _buildProductGrid(displayedProducts),
@@ -253,28 +249,33 @@ class _HomePageState extends State<HomePage> {
           crossAxisSpacing: 18,
           childAspectRatio: 0.72, // controls card width-to-height ratio
         ),
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final product = products[index];
-            return ProductCard(
-              product: product,
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => ProductDetailPage(product: product),
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final product = products[index];
+          return ProductCard(
+            product: product,
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ProductDetailPage(
+                    product: product,
+                    onFavoriteTap: () {
+                      // Will call favorites_service.dart once that exists.
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Added to favorites')),
+                      );
+                    },
                   ),
-                );
-              },
-              onFavoriteTap: () {
-                // Will call favorites_service.dart once that exists.
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Added to favorites')),
-                );
-              },
-            );
-          },
-          childCount: products.length,
-        ),
+                ),
+              );
+            },
+            onFavoriteTap: () {
+              // Will call favorites_service.dart once that exists.
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Added to favorites')),
+              );
+            },
+          );
+        }, childCount: products.length),
       ),
     );
   }

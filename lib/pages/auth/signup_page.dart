@@ -78,8 +78,7 @@ class _SignupPageState extends State<SignupPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const AuthHeader(),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 40),
                     Text(
                       'Sign Up',
                       style: TextStyle(

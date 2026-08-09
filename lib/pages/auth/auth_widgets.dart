@@ -1,87 +1,14 @@
 import 'package:flutter/material.dart';
 
-import '../../theme/app_colors.dart';
-
 /// ===============================================================
 /// SHARED AUTH SCREEN PIECES
 /// ===============================================================
 ///
 /// WHY THIS FILE EXISTS:
-/// Login and Signup both need the exact same decorative header and the
-/// exact same Google/Facebook button row. Rather than writing that twice
-/// (and having it drift out of sync when one gets tweaked), both widgets
-/// live here and get imported into both pages.
-
-/// The soft gradient header shown at the top of Login/Signup, echoing the
-/// splash screen's "K" mark so the auth flow still feels like Kraze,
-/// with a couple of small decorative dots for visual interest —
-/// standing in for the reference design's illustration, using simple
-/// original shapes rather than copying anyone else's artwork.
-class AuthHeader extends StatelessWidget {
-  const AuthHeader({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return SizedBox(
-      width: double.infinity, // <-- without this, the box shrinks to fit
-      // just the "K" text and hugs the left edge instead of centering
-      // across the available width.
-      height: 180,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Small floating decorative dots, loosely echoing the little
-          // doodles (stars/planet) in the reference design.
-          // Positioned(
-          //   top: 20,
-          //   left: 40,
-          //   child: _dot(colorScheme.primary.withValues(alpha: 0.4), 10),
-          // ),
-          // Positioned(
-          //   top: 50,
-          //   right: 50,
-          //   child: _dot(AppColors.accentPrice.withValues(alpha: 0.35), 14),
-          // ),
-          // Positioned(
-          //   bottom: 24,
-          //   left: 70,
-          //   child: _dot(colorScheme.primary.withValues(alpha: 0.25), 8),
-          // ),
-
-          // The gradient "K" mark, same technique as the splash screen.
-          ShaderMask(
-            shaderCallback: (bounds) {
-              return const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [AppColors.primary, AppColors.accentPrice],
-              ).createShader(bounds);
-            },
-            child: const Text(
-              'K',
-              style: TextStyle(
-                fontSize: 90,
-                fontWeight: FontWeight.w900,
-                color: Colors.white,
-                height: 1,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _dot(Color color, double size) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-    );
-  }
-}
+/// Login and Signup both need the exact same "Or sign in/up with" divider
+/// and the exact same Google/Facebook button row. Rather than writing
+/// that twice (and having it drift out of sync when one gets tweaked),
+/// both widgets live here and get imported into both pages.
 
 /// The "Or sign in/up with" divider line with text in the middle.
 class AuthDivider extends StatelessWidget {
@@ -193,7 +120,9 @@ class _SocialButton extends StatelessWidget {
         foregroundColor: Colors.black87,
         padding: const EdgeInsets.symmetric(vertical: 14),
         side: const BorderSide(color: Color(0xFFE0E0E0)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(30),
+        ),
       ),
       icon: Icon(icon, color: iconColor ?? Colors.black87, size: 20),
       label: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),

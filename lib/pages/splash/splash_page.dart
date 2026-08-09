@@ -100,6 +100,7 @@ class _SplashPageState extends State<SplashPage> {
               child: const Text(
                 'K',
                 style: TextStyle(
+                  fontFamily: 'Glitch',
                   fontSize: 120,
                   fontWeight: FontWeight.w900,
                   // The actual color here doesn't matter — ShaderMask
