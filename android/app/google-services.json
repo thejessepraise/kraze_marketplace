@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "26321643703",
+    "project_id": "krazemarketplace",
+    "storage_bucket": "krazemarketplace.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:26321643703:android:637dda56651cbb334dc532",
+        "android_client_info": {
+          "package_name": "com.example.kraze_student_marketplace"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCUuydWyhKr14Pn1-mU1XSgSbW3ZD5E6P0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

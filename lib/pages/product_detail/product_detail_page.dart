@@ -95,9 +95,7 @@ class ProductDetailPage extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: _buildImageSection(context, height: 480),
-          ),
+          Expanded(child: _buildImageSection(context, height: 480)),
           const SizedBox(width: 32),
           Expanded(
             child: SingleChildScrollView(
@@ -330,55 +328,99 @@ class ProductDetailPage extends StatelessWidget {
   // negotiate price, arrange meetup, etc. There's no cart/checkout
   // system, so the one clear "next step" from this page is starting a
   // conversation, which is why it gets the big, prominent button.
+  // =================================================================
+  // ACTIONS: Message Seller + Favorite
+  // =================================================================
+  //
+  // Both actions are placed on the same row.
+  //
+  // Message Seller is the primary action, so it gets most of the
+  // available width.
+  //
+  // Favorite is secondary, so it gets a smaller square button.
+  //
+  // This makes the two actions feel like a single action area instead
+  // of having the favorite button floating underneath the main button.
   Widget _buildActions(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final colorScheme = Theme.of(context).colorScheme;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
       children: [
+        // =============================================================
+        // MESSAGE SELLER BUTTON
+        // =============================================================
+        //
+        // Expanded tells Flutter to give this button all the remaining
+        // horizontal space after the Favorite button is placed.
+        Expanded(
+          child: SizedBox(
+            height: 52,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colorScheme.primary,
+                foregroundColor: colorScheme.onPrimary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+
+              onPressed: () {
+                // For now, we display a message.
+                //
+                // Later, this will open the actual chat screen.
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Messaging feature coming soon!'),
+                  ),
+                );
+              },
+
+              icon: const Icon(Icons.chat_bubble_outline),
+
+              label: const Text('Message Seller'),
+            ),
+          ),
+        ),
+
+        // Space between the two buttons.
+        const SizedBox(width: 12),
+
+        // =============================================================
+        // FAVORITE BUTTON
+        // =============================================================
+        //
+        // Unlike the Message Seller button, this is only an icon.
+        //
+        // A fixed width keeps it compact and prevents it from taking
+        // unnecessary space.
         SizedBox(
-          width: double.infinity,
+          width: 52,
           height: 52,
-          child: ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: colorScheme.primary,
-              foregroundColor: colorScheme.onPrimary,
+          child: IconButton(
+            onPressed: onFavoriteTap,
+
+            style: IconButton.styleFrom(
+              backgroundColor: colorScheme.surfaceContainerHighest,
+
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
             ),
-            onPressed: () {
-              // Will open chat_detail_page.dart once that screen exists.
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Messaging feature coming soon!'),
-                ),
-              );
-            },
-            icon: const Icon(Icons.chat_bubble_outline),
-            label: const Text('Message Seller'),
+
+            icon: Icon(
+              product.isFavorite ? Icons.favorite : Icons.favorite_border,
+
+              size: 23,
+
+              color: product.isFavorite
+                  ? Colors.redAccent
+                  : colorScheme.onSurfaceVariant,
+            ),
+
+            // Useful on desktop/web when the user hovers over
+            // the button.
+            tooltip: 'Favorite',
           ),
-        ),
-        const SizedBox(height: 12),
-        // A small text link, not a full button — this is the "smaller
-        // favorite" treatment, sitting quietly under the primary action
-        // rather than competing with it for attention.
-        TextButton.icon(
-          onPressed: onFavoriteTap,
-          style: TextButton.styleFrom(
-            foregroundColor: product.isFavorite
-                ? Colors.redAccent
-                : colorScheme.onSurfaceVariant,
-            padding: EdgeInsets.zero,
-            minimumSize: Size.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-          icon: Icon(
-            product.isFavorite ? Icons.favorite : Icons.favorite_border,
-            size: 18,
-          ),
-          label: const Text('Favorite'),
         ),
       ],
     );
