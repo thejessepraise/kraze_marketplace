@@ -30,6 +30,17 @@ class CustomTextField extends StatefulWidget {
   /// forms elsewhere in the app that want a less rounded look.
   final double borderRadius;
 
+  /// How many lines tall the field is. Defaults to 1 (a single-line
+  /// "pill" input, like Email/Password). Post Item's description field
+  /// passes a higher number so students have room to actually write a
+  /// few sentences instead of one long scrolling line.
+  ///
+  /// WHY NOT JUST HARDCODE maxLines: 1 HERE:
+  /// A password field specifically must stay 1 line no matter what gets
+  /// passed in — obscureText only works correctly on single-line fields —
+  /// so that case is handled separately in build() below.
+  final int maxLines;
+
   const CustomTextField({
     super.key,
     required this.hint,
@@ -39,6 +50,7 @@ class CustomTextField extends StatefulWidget {
     this.validator,
     this.prefixIcon,
     this.borderRadius = 30,
+    this.maxLines = 1,
   });
 
   @override
@@ -59,6 +71,9 @@ class _CustomTextFieldState extends State<CustomTextField> {
     return TextFormField(
       controller: widget.controller,
       obscureText: widget.isPassword ? _obscure : false,
+      // A password field must stay single-line regardless of what was
+      // passed in, so obscureText keeps working correctly.
+      maxLines: widget.isPassword ? 1 : widget.maxLines,
       keyboardType: widget.keyboardType,
       validator: widget.validator,
       style: TextStyle(color: colorScheme.onSurface),

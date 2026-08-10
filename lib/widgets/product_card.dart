@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/product.dart';
 import '../theme/app_colors.dart';
+import 'product_image.dart';
 
 /// Displays one product inside a grid.
 ///
@@ -66,32 +67,19 @@ class ProductCard extends StatelessWidget {
             // "Take up all the remaining vertical space."
             //
             Expanded(
-  child: ClipRRect(
-    borderRadius: const BorderRadius.vertical(
-      top: Radius.circular(16),
-    ),
-    // Image.asset (not Image.network) — product.imageUrl holds a path
-    // to a file bundled inside assets/images/, not an internet URL.
-    // Image.network only works with http(s):// addresses, which is
-    // why the cards were showing broken-image icons before this fix.
-    child: Image.asset(
-      product.imageUrl,
-      width: double.infinity,
-      fit: BoxFit.cover,
-
-      // If the asset path is wrong or the file is missing, show a
-      // fallback icon instead of crashing the app.
-      errorBuilder: (context, error, stackTrace) {
-        return const Center(
-          child: Icon(
-            Icons.broken_image,
-            size: 50,
-          ),
-        );
-      },
-    ),
-  ),
-),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(16),
+                ),
+                // ProductImage handles both bundled assets/images/... paths
+                // AND device file paths (from a student's own photo picked
+                // in Post Item) — see widgets/product_image.dart.
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ProductImage(imagePath: product.imageUrl),
+                ),
+              ),
+            ),
             // ==========================================================
             // PRODUCT INFORMATION
             // ==========================================================

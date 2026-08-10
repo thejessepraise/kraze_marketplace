@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/product.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/product_image.dart';
 
 /// ===============================================================
 /// PRODUCT DETAILS PAGE
@@ -129,7 +130,6 @@ class ProductDetailPage extends StatelessWidget {
   // =================================================================
   Widget _buildImageSection(BuildContext context, {double height = 340}) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
     return Container(
       width: double.infinity,
@@ -142,19 +142,7 @@ class ProductDetailPage extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: Image.asset(
-          product.imageUrl,
-          fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) {
-            return Center(
-              child: Icon(
-                Icons.image_not_supported_outlined,
-                size: 80,
-                color: colorScheme.onSurfaceVariant,
-              ),
-            );
-          },
-        ),
+        child: ProductImage(imagePath: product.imageUrl, fit: BoxFit.contain),
       ),
     );
   }

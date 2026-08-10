@@ -4,6 +4,7 @@ import '../../models/product.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/bottom_nav_bar.dart';
 import '../product_detail/product_detail_page.dart';
+import '../post_item/post_item_page.dart';
 
 /// The Home Page: the first screen a logged-in student sees.
 ///
@@ -70,20 +71,43 @@ class _HomePageState extends State<HomePage> {
       bottomNavigationBar: AppBottomNavBar(
         currentIndex: _navIndex,
         onTap: (index) {
+          // Sell (index 2) isn't really a "tab" the way Home/Favorites/
+          // Chat/Profile are — it's an action that opens a new screen on
+          // top of whichever tab you're already on. So instead of
+          // switching _navIndex to 2 (which would leave that tab looking
+          // permanently "selected" afterwards), we push Post Item and
+          // leave the currently-selected tab exactly as it was.
+          if (index == 2) {
+            _openPostItem();
+            return;
+          }
+
           // setState tells Flutter "data changed, please redraw the screen."
           // Without calling setState, changing _navIndex would update the
           // variable but the screen would NOT visually update.
           setState(() => _navIndex = index);
-          if (index == 2) {
-            // Sell tab tapped — for now just show a placeholder message,
-            // since post_item_page.dart doesn't exist yet.
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Post Item page coming soon')),
-            );
-          }
         },
       ),
     );
+  }
+
+  /// Opens Post Item and, if the student actually posted something
+  /// (PostItemPage pops with `true`), rebuilds this screen so the new
+  /// listing shows up immediately.
+  ///
+  /// WHY setState(() {}) IS ENOUGH HERE:
+  /// sampleProducts is a single shared list (see models/product.dart) —
+  /// PostItemPage adds directly to it. So by the time we're back here,
+  /// the data already includes the new listing; we just need Flutter to
+  /// re-run build() so `displayedProducts` picks it up on the next read.
+  Future<void> _openPostItem() async {
+    final posted = await Navigator.of(
+      context,
+    ).push<bool>(MaterialPageRoute(builder: (_) => const PostItemPage()));
+
+    if (posted == true && mounted) {
+      setState(() {});
+    }
   }
 
   /// App name + dark mode toggle + notification bell + profile avatar.
