@@ -74,15 +74,6 @@ class SocialSignInRow extends StatelessWidget {
             onTap: () => _showComingSoon(context, 'Google'),
           ),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _SocialButton(
-            label: 'Facebook',
-            icon: Icons.facebook,
-            iconColor: const Color(0xFF1877F2), // Facebook brand blue
-            onTap: () => _showComingSoon(context, 'Facebook'),
-          ),
-        ),
       ],
     );
   }
@@ -120,9 +111,7 @@ class _SocialButton extends StatelessWidget {
         foregroundColor: Colors.black87,
         padding: const EdgeInsets.symmetric(vertical: 14),
         side: const BorderSide(color: Color(0xFFE0E0E0)),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(30),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
       ),
       icon: Icon(icon, color: iconColor ?? Colors.black87, size: 20),
       label: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),

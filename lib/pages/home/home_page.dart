@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../constants/categories.dart';
 import '../../models/product.dart';
-import '../../widgets/product_card.dart';
+import '../../widgets/product_grid.dart';
 import '../../widgets/bottom_nav_bar.dart';
-import '../product_detail/product_detail_page.dart';
 import '../post_item/post_item_page.dart';
+import '../search/search_page.dart';
 
 /// The Home Page: the first screen a logged-in student sees.
 ///
@@ -144,33 +144,42 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// The search input (visual only for now — no logic yet, that's the
-  /// Search page's job).
+  /// The search bar. Tapping it (anywhere on the bar) opens the
+  /// dedicated Search page — matching how most marketplace apps treat
+  /// their home search bar as a shortcut into a focused search screen,
+  /// rather than filtering Home's own grid in place.
   Widget _buildSearchBar() {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        decoration: BoxDecoration(
-          color: theme.cardColor,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: theme.dividerColor),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.search, color: colorScheme.onSurfaceVariant),
-            const SizedBox(width: 10),
-            Text(
-              'Search textbooks, laptops, phones...',
-              style: TextStyle(
-                color: colorScheme.onSurfaceVariant,
-                fontSize: 14,
+      child: GestureDetector(
+        onTap: () {
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const SearchPage()));
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: theme.dividerColor),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.search, color: colorScheme.onSurfaceVariant),
+              const SizedBox(width: 10),
+              Text(
+                'Search textbooks, laptops, phones...',
+                style: TextStyle(
+                  color: colorScheme.onSurfaceVariant,
+                  fontSize: 14,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -243,64 +252,13 @@ class _HomePageState extends State<HomePage> {
 
   /// The 2-column grid of product cards.
   ///
-  /// WHY SliverGrid (not a plain GridView):
-  /// Because this grid lives inside a CustomScrollView (see build() above),
-  /// it must be a "sliver" version of the grid so it can share ONE scroll
-  /// position with the header and category row above it, rather than
-  /// having its own separate, nested scroll area.
+  /// Now just delegates to ProductGridSliver (widgets/product_grid.dart),
+  /// which Search Results also uses — see that file for why this was
+  /// pulled out into its own widget.
   Widget _buildProductGrid(List<Product> products) {
-    if (products.isEmpty) {
-      final colorScheme = Theme.of(context).colorScheme;
-      return SliverToBoxAdapter(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 60),
-          child: Center(
-            child: Text(
-              'No items in this category yet.',
-              style: TextStyle(color: colorScheme.onSurfaceVariant),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      sliver: SliverGrid(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2, // 2 cards per row
-          mainAxisSpacing: 18,
-          crossAxisSpacing: 18,
-          childAspectRatio: 0.72, // controls card width-to-height ratio
-        ),
-        delegate: SliverChildBuilderDelegate((context, index) {
-          final product = products[index];
-          return ProductCard(
-            product: product,
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => ProductDetailPage(
-                    product: product,
-                    onFavoriteTap: () {
-                      // Will call favorites_service.dart once that exists.
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Added to favorites')),
-                      );
-                    },
-                  ),
-                ),
-              );
-            },
-            onFavoriteTap: () {
-              // Will call favorites_service.dart once that exists.
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Added to favorites')),
-              );
-            },
-          );
-        }, childCount: products.length),
-      ),
+    return ProductGridSliver(
+      products: products,
+      emptyMessage: 'No items in this category yet.',
     );
   }
 }
