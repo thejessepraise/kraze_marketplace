@@ -3,6 +3,8 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../constants/categories.dart';
 import '../../models/product.dart';
+import '../../services/marketplace_store.dart';
+import '../../theme/app_text_styles.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/product_image.dart';
@@ -120,7 +122,7 @@ class _PostItemPageState extends State<PostItemPage> {
 
     // Newest listing first, matching how Home's "Recent Listings" title
     // reads.
-    sampleProducts.insert(0, newProduct);
+    marketplaceStore.addProduct(newProduct);
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Listing posted!')),
@@ -163,9 +165,7 @@ class _PostItemPageState extends State<PostItemPage> {
 
                     Text(
                       'Item Title',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                      style: AppTextStyles.fieldLabel.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
                     ),
@@ -185,9 +185,7 @@ class _PostItemPageState extends State<PostItemPage> {
 
                     Text(
                       'Price (GH₵)',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                      style: AppTextStyles.fieldLabel.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
                     ),
@@ -198,7 +196,7 @@ class _PostItemPageState extends State<PostItemPage> {
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      prefixIcon: Icons.attach_money,
+                      prefixText: '₵ ',
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
                           return 'Enter a price';
@@ -217,9 +215,7 @@ class _PostItemPageState extends State<PostItemPage> {
 
                     Text(
                       'Category',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                      style: AppTextStyles.fieldLabel.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
                     ),
@@ -229,9 +225,7 @@ class _PostItemPageState extends State<PostItemPage> {
 
                     Text(
                       'Description',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                      style: AppTextStyles.fieldLabel.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
                     ),
@@ -290,11 +284,9 @@ class _PostItemPageState extends State<PostItemPage> {
                   const SizedBox(height: 10),
                   Text(
                     'Add a Photo',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
+                    style: AppTextStyles.fieldLabel.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
                   ),
                 ],
               )
@@ -347,28 +339,15 @@ class _PostItemPageState extends State<PostItemPage> {
                 color: selected ? colorScheme.primary : theme.dividerColor,
               ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  category.icon,
-                  size: 16,
-                  color: selected
-                      ? colorScheme.onPrimary
-                      : colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  category.name,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: selected
-                        ? colorScheme.onPrimary
-                        : colorScheme.onSurface,
-                  ),
-                ),
-              ],
+            child: Text(
+              category.name,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: selected
+                    ? colorScheme.onPrimary
+                    : colorScheme.onSurface,
+              ),
             ),
           ),
         );

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../auth/login_page.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/kraze_page_route.dart';
+import '../auth/login_page.dart';
 
 /// The very first screen a student sees when the app launches — shows the
 /// Kraze logo/branding briefly, then moves on to the next screen.
@@ -63,7 +64,7 @@ class _SplashPageState extends State<SplashPage> {
     // useful to go "back" to on a splash screen.
     Navigator.of(
       context,
-    ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginPage()));
+    ).pushReplacement(KrazePageRoute(builder: (_) => const LoginPage()));
   }
 
   @override

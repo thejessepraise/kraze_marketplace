@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/app_text_styles.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/custom_button.dart';
+import '../../widgets/kraze_page_route.dart';
 import '../home/home_page.dart';
 import 'auth_widgets.dart';
 import 'signup_page.dart';
@@ -65,7 +67,7 @@ class _LoginPageState extends State<LoginPage> {
     // back button from Home exits the app rather than returning to the
     // login screen — the correct behavior once someone is "logged in".
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const HomePage()),
+      KrazePageRoute(builder: (_) => const HomePage()),
       (route) => false,
     );
   }
@@ -95,7 +97,25 @@ class _LoginPageState extends State<LoginPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 32),
+                    // A single, restrained brand touch — not the full
+                    // Splash treatment, just enough that Login still
+                    // reads as unmistakably Kraze.
+                    ShaderMask(
+                      shaderCallback: (bounds) =>
+                          AppGradients.brand.createShader(bounds),
+                      child: const Text(
+                        'K',
+                        style: TextStyle(
+                          fontFamily: 'Glitch',
+                          fontSize: 34,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          height: 1,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     Text(
                       'Welcome Back',
                       style: TextStyle(
@@ -117,7 +137,7 @@ class _LoginPageState extends State<LoginPage> {
                         GestureDetector(
                           onTap: () {
                             Navigator.of(context).push(
-                              MaterialPageRoute(
+                              KrazePageRoute(
                                 builder: (_) => const SignupPage(),
                               ),
                             );

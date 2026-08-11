@@ -14,6 +14,7 @@ class Product {
   final String category;
   final String imageUrl; // network image URL, or empty string for placeholder
   final String sellerName;
+  final String sellerPhone; // empty string if the seller has none on file
   final DateTime postedAt;
   final bool isFavorite;
   final String description;
@@ -24,6 +25,7 @@ class Product {
     required this.price,
     required this.category,
     required this.sellerName,
+    this.sellerPhone = '',
     required this.postedAt,
     required this.imageUrl,
     this.isFavorite = false,
@@ -33,6 +35,21 @@ class Product {
     // fallback message in that case (see product_detail_page.dart).
     this.description = '',
   });
+
+  Product copyWith({bool? isFavorite}) {
+    return Product(
+      id: id,
+      title: title,
+      price: price,
+      category: category,
+      sellerName: sellerName,
+      sellerPhone: sellerPhone,
+      postedAt: postedAt,
+      imageUrl: imageUrl,
+      isFavorite: isFavorite ?? this.isFavorite,
+      description: description,
+    );
+  }
 }
 
 /// Temporary sample data so the Home Page has something to display.
@@ -61,6 +78,7 @@ final List<Product> sampleProducts = [
     price: 850.00,
     category: 'Laptops',
     sellerName: 'Kwabs Laptops',
+    sellerPhone: '+233241234567',
     postedAt: DateTime.now().subtract(const Duration(hours: 6)),
     imageUrl: 'assets/images/laptop.jpg',
     description:
@@ -74,6 +92,7 @@ final List<Product> sampleProducts = [
     price: 18.00,
     category: 'Calculators',
     sellerName: 'Efua B.',
+    sellerPhone: '+233207654321',
     postedAt: DateTime.now().subtract(const Duration(days: 1)),
     imageUrl: 'assets/images/calculus.jpg',
     description:
@@ -98,6 +117,7 @@ final List<Product> sampleProducts = [
     price: 40.00,
     category: 'Gaming',
     sellerName: 'Nana A.',
+    sellerPhone: '+233551122334',
     postedAt: DateTime.now().subtract(const Duration(days: 2)),
     imageUrl: 'assets/images/Joystick-ps4-greenurba.jpg',
     // Left blank on purpose, as an example of a listing with no
@@ -110,6 +130,7 @@ final List<Product> sampleProducts = [
     price: 400.00,
     category: 'Phones',
     sellerName: 'Abena S.',
+    sellerPhone: '+233209988776',
     postedAt: DateTime.now().subtract(const Duration(days: 2, hours: 5)),
     imageUrl: 'assets/images/iphone11-white.jpg',
     description:

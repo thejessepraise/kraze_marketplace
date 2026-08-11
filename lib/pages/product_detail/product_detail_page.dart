@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../models/product.dart';
+import '../../services/marketplace_store.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/kraze_page_route.dart';
 import '../../widgets/product_image.dart';
+import '../chat/chat_page.dart';
 
 /// ===============================================================
 /// PRODUCT DETAILS PAGE
@@ -353,12 +356,10 @@ class ProductDetailPage extends StatelessWidget {
               ),
 
               onPressed: () {
-                // For now, we display a message.
-                //
-                // Later, this will open the actual chat screen.
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Messaging feature coming soon!'),
+                final conversation = marketplaceStore.openConversation(product);
+                Navigator.of(context).push(
+                  KrazePageRoute(
+                    builder: (_) => ChatPage(conversation: conversation),
                   ),
                 );
               },
@@ -385,7 +386,10 @@ class ProductDetailPage extends StatelessWidget {
           width: 52,
           height: 52,
           child: IconButton(
-            onPressed: onFavoriteTap,
+            onPressed: () {
+              marketplaceStore.toggleFavorite(product.id);
+              onFavoriteTap?.call();
+            },
 
             style: IconButton.styleFrom(
               backgroundColor: colorScheme.surfaceContainerHighest,

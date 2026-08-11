@@ -60,7 +60,7 @@ class AppBottomNavBar extends StatelessWidget {
   }) {
     final colorScheme = Theme.of(context).colorScheme;
     final bool selected = index == currentIndex;
-    return GestureDetector(
+    return _TapScale(
       onTap: () => onTap(index),
       child: Icon(
         icon,
@@ -74,7 +74,7 @@ class AppBottomNavBar extends StatelessWidget {
   /// from the other icons, since posting an item is the app's key action.
   Widget _sellButton(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return GestureDetector(
+    return _TapScale(
       onTap: () => onTap(2),
       child: Container(
         width: 46,
@@ -86,6 +86,45 @@ class AppBottomNavBar extends StatelessWidget {
         // onPrimary = whatever color reads clearly on top of "primary" in
         // THIS theme — Material 3 works this out for us.
         child: Icon(Icons.add, color: colorScheme.onPrimary, size: 26),
+      ),
+    );
+  }
+}
+
+/// Subtle, restrained "press" feedback for a tappable widget that isn't
+/// already a Material ripple surface (nav icons/the Sell button sit
+/// directly on the nav bar's flat background). Scales down slightly on
+/// press and springs back on release — natural tap feedback without
+/// adding a ripple package or changing the bar's flat look.
+class _TapScale extends StatefulWidget {
+  const _TapScale({required this.onTap, required this.child});
+
+  final VoidCallback onTap;
+  final Widget child;
+
+  @override
+  State<_TapScale> createState() => _TapScaleState();
+}
+
+class _TapScaleState extends State<_TapScale> {
+  bool _pressed = false;
+
+  void _setPressed(bool value) {
+    if (_pressed != value) setState(() => _pressed = value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onTap,
+      onTapDown: (_) => _setPressed(true),
+      onTapUp: (_) => _setPressed(false),
+      onTapCancel: () => _setPressed(false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.88 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        child: widget.child,
       ),
     );
   }

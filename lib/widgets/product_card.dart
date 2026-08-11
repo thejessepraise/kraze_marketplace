@@ -43,22 +43,28 @@ class ProductCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    // GestureDetector allows the entire card to respond to taps.
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          // The card color comes from the app theme, so changing the
-          // theme automatically changes every ProductCard.
-          color: theme.cardColor,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: theme.dividerColor),
-        ),
+    // Material + InkWell gives the whole card a natural ripple on tap —
+    // built into Flutter, no extra package — instead of no tap feedback
+    // at all.
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            // The card color comes from the app theme, so changing the
+            // theme automatically changes every ProductCard.
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: theme.dividerColor),
+          ),
 
-        // Column stacks widgets vertically.
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+          // Column stacks widgets vertically.
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             // ==========================================================
             // IMAGE AREA
             // ==========================================================
@@ -168,6 +174,7 @@ class ProductCard extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 }

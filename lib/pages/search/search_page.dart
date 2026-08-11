@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../constants/categories.dart';
 import '../../models/product.dart';
+import '../../theme/app_text_styles.dart';
 import '../../widgets/product_grid.dart';
 
 /// The Search screen — reached by tapping the search bar on Home.
@@ -178,9 +179,8 @@ class _SearchPageState extends State<SearchPage> {
         children: [
           Text(
             'Popular Categories',
-            style: TextStyle(
+            style: AppTextStyles.sectionTitle.copyWith(
               fontSize: 15,
-              fontWeight: FontWeight.bold,
               color: colorScheme.onSurface,
             ),
           ),

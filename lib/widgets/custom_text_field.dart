@@ -25,6 +25,12 @@ class CustomTextField extends StatefulWidget {
   final String? Function(String?)? validator;
   final IconData? prefixIcon;
 
+  /// Optional short text prefix (e.g. a currency symbol like "₵") shown
+  /// where an icon would normally go. Material's icon set has no cedi
+  /// symbol, so this lets a field show one without faking it through an
+  /// unrelated icon. Only one of prefixIcon / prefixText should be set.
+  final String? prefixText;
+
   /// How rounded the field's corners are. Defaults to a full "pill"
   /// shape (30) to match the reference design, but can be overridden for
   /// forms elsewhere in the app that want a less rounded look.
@@ -49,6 +55,7 @@ class CustomTextField extends StatefulWidget {
     this.keyboardType = TextInputType.text,
     this.validator,
     this.prefixIcon,
+    this.prefixText,
     this.borderRadius = 30,
     this.maxLines = 1,
   });
@@ -85,6 +92,14 @@ class _CustomTextFieldState extends State<CustomTextField> {
         prefixIcon: widget.prefixIcon != null
             ? Icon(widget.prefixIcon, color: colorScheme.onSurfaceVariant)
             : null,
+        // Rendered with the same weight/color as the text being typed
+        // (not the muted onSurfaceVariant icons use) so a currency
+        // symbol like "₵" reads clearly instead of looking faded.
+        prefixText: widget.prefixText,
+        prefixStyle: TextStyle(
+          color: colorScheme.onSurface,
+          fontWeight: FontWeight.w600,
+        ),
         // Only password fields get the eye toggle — a plain email field
         // has nothing to hide, so this stays null for those.
         suffixIcon: widget.isPassword

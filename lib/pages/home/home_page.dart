@@ -1,28 +1,18 @@
 import 'package:flutter/material.dart';
+
 import '../../constants/categories.dart';
 import '../../models/product.dart';
-import '../../widgets/product_grid.dart';
+import '../../services/marketplace_store.dart';
+import '../../theme/app_text_styles.dart';
 import '../../widgets/bottom_nav_bar.dart';
+import '../../widgets/kraze_page_route.dart';
+import '../../widgets/product_grid.dart';
+import '../chat/messages_page.dart';
+import '../favorites/favorites_page.dart';
 import '../post_item/post_item_page.dart';
+import '../profile/profile_page.dart';
 import '../search/search_page.dart';
 
-/// The Home Page: the first screen a logged-in student sees.
-///
-/// WHY StatefulWidget (not StatelessWidget like ProductCard):
-/// This page needs to REMEMBER two things that change while the user is on
-/// it: which bottom-nav tab is selected, and which category filter is
-/// selected. Whenever something needs to change and have the screen
-/// redraw itself, it needs to live inside a State object — that's exactly
-/// what StatefulWidget gives us.
-///
-/// NOTE ON COLORS:
-/// Colors here are read from Theme.of(context) rather than typed directly
-/// as AppColors.xxx. This just means every color ultimately traces back to
-/// the single darkTheme defined in theme/dark_theme.dart — so if you
-/// tweak that one file, this whole page updates automatically. Because this
-/// is a State class, `context` is already available as a property on
-/// `this` inside any method, which is why the helper methods below don't
-/// need a `context` parameter added.
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -31,111 +21,150 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  int _navIndex = 0; // which bottom-nav tab is active
-  String _selectedCategory = 'All'; // which category chip is active
+  int _selectedTab = 0;
+  String _selectedCategory = 'All';
 
   @override
   Widget build(BuildContext context) {
-    // Filter the sample list based on the selected category.
-    // WHY HERE, NOT A SEPARATE FUNCTION FILE:
-    // This filtering is simple and only used by this page, so keeping it in
-    // build() is easier to follow for now. If it grows more complex later,
-    // we'd move it into product_service.dart.
-    final List<Product> displayedProducts = _selectedCategory == 'All'
-        ? sampleProducts
-        : sampleProducts.where((p) => p.category == _selectedCategory).toList();
-
-    return Scaffold(
-      // No explicit backgroundColor here anymore — Scaffold automatically
-      // uses theme.scaffoldBackgroundColor from whichever theme is active,
-      // so this ONE line change (removing a hardcoded color) is what makes
-      // the whole page background switch between modes correctly.
-      body: SafeArea(
-        // CustomScrollView + Slivers let us mix different scrolling
-        // sections (a header, a horizontal category list, and a grid) into
-        // ONE smooth scroll, instead of nesting separate scrollable widgets
-        // inside each other (which Flutter doesn't allow without extra
-        // workarounds).
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(child: _buildTopBar()),
-            SliverToBoxAdapter(child: _buildSearchBar()),
-            const SliverToBoxAdapter(child: SizedBox(height: 12)),
-            SliverToBoxAdapter(child: _buildCategoryRow()),
-            SliverToBoxAdapter(child: _buildSectionTitle('Recent Listings')),
-            _buildProductGrid(displayedProducts),
-            const SliverToBoxAdapter(child: SizedBox(height: 90)),
-          ],
-        ),
-      ),
-      bottomNavigationBar: AppBottomNavBar(
-        currentIndex: _navIndex,
-        onTap: (index) {
-          // Sell (index 2) isn't really a "tab" the way Home/Favorites/
-          // Chat/Profile are — it's an action that opens a new screen on
-          // top of whichever tab you're already on. So instead of
-          // switching _navIndex to 2 (which would leave that tab looking
-          // permanently "selected" afterwards), we push Post Item and
-          // leave the currently-selected tab exactly as it was.
-          if (index == 2) {
-            _openPostItem();
-            return;
-          }
-
-          // setState tells Flutter "data changed, please redraw the screen."
-          // Without calling setState, changing _navIndex would update the
-          // variable but the screen would NOT visually update.
-          setState(() => _navIndex = index);
-        },
-      ),
+    return ListenableBuilder(
+      listenable: marketplaceStore,
+      builder: (context, _) {
+        return Scaffold(
+          body: SafeArea(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              switchInCurve: Curves.easeOut,
+              switchOutCurve: Curves.easeIn,
+              transitionBuilder: (child, animation) =>
+                  FadeTransition(opacity: animation, child: child),
+              // A KeyedSubtree keyed on the tab index tells AnimatedSwitcher
+              // "this is a different screen" — without a key it can't tell
+              // FavoritesPage apart from ProfilePage and won't animate.
+              child: KeyedSubtree(
+                key: ValueKey(_selectedTab),
+                child: _buildCurrentTab(),
+              ),
+            ),
+          ),
+          bottomNavigationBar: AppBottomNavBar(
+            currentIndex: _selectedTab,
+            onTap: _onNavigationTap,
+          ),
+        );
+      },
     );
   }
 
-  /// Opens Post Item and, if the student actually posted something
-  /// (PostItemPage pops with `true`), rebuilds this screen so the new
-  /// listing shows up immediately.
-  ///
-  /// WHY setState(() {}) IS ENOUGH HERE:
-  /// sampleProducts is a single shared list (see models/product.dart) —
-  /// PostItemPage adds directly to it. So by the time we're back here,
-  /// the data already includes the new listing; we just need Flutter to
-  /// re-run build() so `displayedProducts` picks it up on the next read.
-  Future<void> _openPostItem() async {
-    final posted = await Navigator.of(
-      context,
-    ).push<bool>(MaterialPageRoute(builder: (_) => const PostItemPage()));
-
-    if (posted == true && mounted) {
-      setState(() {});
-    }
+  Widget _buildCurrentTab() {
+    return switch (_selectedTab) {
+      1 => const FavoritesPage(),
+      3 => const MessagesPage(),
+      4 => const ProfilePage(),
+      _ => _MarketplaceTab(
+          selectedCategory: _selectedCategory,
+          onCategorySelected: (category) {
+            setState(() => _selectedCategory = category);
+          },
+          onProfileTap: () => setState(() => _selectedTab = 4),
+        ),
+    };
   }
 
-  /// App name + dark mode toggle + notification bell + profile avatar.
-  Widget _buildTopBar() {
-    final colorScheme = Theme.of(context).colorScheme;
+  Future<void> _onNavigationTap(int index) async {
+    if (index == 2) {
+      await Navigator.of(context).push<bool>(
+        KrazePageRoute(builder: (_) => const PostItemPage()),
+      );
+      return;
+    }
+    setState(() => _selectedTab = index);
+  }
+}
 
+class _MarketplaceTab extends StatelessWidget {
+  const _MarketplaceTab({
+    required this.selectedCategory,
+    required this.onCategorySelected,
+    required this.onProfileTap,
+  });
+
+  final String selectedCategory;
+  final ValueChanged<String> onCategorySelected;
+  final VoidCallback onProfileTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final products = selectedCategory == 'All'
+        ? marketplaceStore.products
+        : marketplaceStore.products
+              .where((product) => product.category == selectedCategory)
+              .toList(growable: false);
+
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(child: _buildTopBar(context)),
+        SliverToBoxAdapter(child: _buildSearchShortcut(context)),
+        const SliverToBoxAdapter(child: SizedBox(height: 16)),
+        SliverToBoxAdapter(child: _buildCategories(context)),
+        SliverToBoxAdapter(child: _buildSectionHeader(context, products.length)),
+        ProductGridSliver(
+          products: products,
+          emptyIcon: Icons.storefront_outlined,
+          emptyMessage: 'No items in this category yet.',
+        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 90)),
+      ],
+    );
+  }
+
+  // =================================================================
+  // TOP BAR — small Glitch-font "K" mark + wordmark reads as branded
+  // without repeating the full Splash treatment.
+  // =================================================================
+  Widget _buildTopBar(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            'Kraze\nMarketplace',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: colorScheme.onSurface,
-              height: 1.1,
-            ),
+          Row(
+            children: [
+              ShaderMask(
+                shaderCallback: (bounds) =>
+                    AppGradients.brand.createShader(bounds),
+                child: const Text(
+                  'K',
+                  style: TextStyle(
+                    fontFamily: 'Glitch',
+                    fontSize: 30,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    height: 1,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text('Marketplace', style: AppTextStyles.sectionTitle),
+            ],
           ),
           Row(
             children: [
-              Icon(Icons.notifications_none, color: colorScheme.onSurface),
-              const SizedBox(width: 12),
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: colorScheme.primaryContainer,
-                child: Icon(Icons.person, color: colorScheme.primary),
+              IconButton(
+                icon: const Icon(Icons.notifications_none),
+                onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('You are all caught up.')),
+                ),
+              ),
+              const SizedBox(width: 4),
+              InkWell(
+                onTap: onProfileTap,
+                borderRadius: BorderRadius.circular(24),
+                child: CircleAvatar(
+                  radius: 20,
+                  backgroundColor: colorScheme.primaryContainer,
+                  child: Icon(Icons.person, color: colorScheme.primary),
+                ),
               ),
             ],
           ),
@@ -144,23 +173,17 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// The search bar. Tapping it (anywhere on the bar) opens the
-  /// dedicated Search page — matching how most marketplace apps treat
-  /// their home search bar as a shortcut into a focused search screen,
-  /// rather than filtering Home's own grid in place.
-  Widget _buildSearchBar() {
+  Widget _buildSearchShortcut(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: GestureDetector(
-        onTap: () {
-          Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: (_) => const SearchPage()));
-        },
-        child: Container(
+      child: InkWell(
+        onTap: () => Navigator.of(context).push(
+          KrazePageRoute(builder: (_) => const SearchPage()),
+        ),
+        borderRadius: BorderRadius.circular(14),
+        child: Ink(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           decoration: BoxDecoration(
             color: theme.cardColor,
@@ -173,10 +196,7 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(width: 10),
               Text(
                 'Search textbooks, laptops, phones...',
-                style: TextStyle(
-                  color: colorScheme.onSurfaceVariant,
-                  fontSize: 14,
-                ),
+                style: TextStyle(color: colorScheme.onSurfaceVariant),
               ),
             ],
           ),
@@ -185,47 +205,39 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// Horizontal scrollable row of category filter chips.
-  Widget _buildCategoryRow() {
+  Widget _buildCategories(BuildContext context) {
+    final categories = [
+      const Category('All', Icons.apps),
+      ...kCategories,
+    ];
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-
-    // We build a list that starts with "All" followed by every real
-    // category, so students can reset the filter easily.
-    final allNames = ['All', ...kCategories.map((c) => c.name)];
-
     return SizedBox(
-      height: 70,
+      height: 76,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        itemCount: allNames.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemCount: categories.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
-          final name = allNames[index];
-          final bool selected = name == _selectedCategory;
-          return GestureDetector(
-            onTap: () => setState(() => _selectedCategory = name),
-            child: Container(
-              alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: selected ? colorScheme.primary : theme.cardColor,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: selected ? colorScheme.primary : theme.dividerColor,
-                ),
+          final category = categories[index];
+          final selected = category.name == selectedCategory;
+          return ChoiceChip(
+            label: Text(category.name),
+            selected: selected,
+            onSelected: (_) => onCategorySelected(category.name),
+            selectedColor: colorScheme.primary,
+            backgroundColor: theme.cardColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(
+                color: selected ? colorScheme.primary : theme.dividerColor,
               ),
-              child: Text(
-                name,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: selected
-                      ? colorScheme.onPrimary
-                      : colorScheme.onSurface,
-                ),
-              ),
+            ),
+            labelStyle: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: selected ? colorScheme.onPrimary : colorScheme.onSurface,
             ),
           );
         },
@@ -233,32 +245,21 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// A simple section heading, e.g. "Recent Listings".
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionHeader(BuildContext context, int count) {
     final colorScheme = Theme.of(context).colorScheme;
-
+    final title = selectedCategory == 'All' ? 'Recent Listings' : selectedCategory;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 17,
-          fontWeight: FontWeight.bold,
-          color: colorScheme.onSurface,
-        ),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(title, style: AppTextStyles.sectionTitle),
+          Text(
+            '$count item${count == 1 ? '' : 's'}',
+            style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+          ),
+        ],
       ),
-    );
-  }
-
-  /// The 2-column grid of product cards.
-  ///
-  /// Now just delegates to ProductGridSliver (widgets/product_grid.dart),
-  /// which Search Results also uses — see that file for why this was
-  /// pulled out into its own widget.
-  Widget _buildProductGrid(List<Product> products) {
-    return ProductGridSliver(
-      products: products,
-      emptyMessage: 'No items in this category yet.',
     );
   }
 }

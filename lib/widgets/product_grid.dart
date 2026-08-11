@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../models/product.dart';
 import '../pages/product_detail/product_detail_page.dart';
+import '../services/marketplace_store.dart';
+import 'kraze_page_route.dart';
 import 'product_card.dart';
 
 /// A reusable, scrollable grid of ProductCards, with the standard
@@ -27,10 +29,16 @@ class ProductGridSliver extends StatelessWidget {
   final List<Product> products;
   final String emptyMessage;
 
+  /// Optional icon shown above the empty message (e.g. a heart outline
+  /// for Favorites). Screens that don't pass one just get the message,
+  /// so this stays backward-compatible with existing callers.
+  final IconData? emptyIcon;
+
   const ProductGridSliver({
     super.key,
     required this.products,
     this.emptyMessage = 'No items found.',
+    this.emptyIcon,
   });
 
   @override
@@ -39,12 +47,29 @@ class ProductGridSliver extends StatelessWidget {
       final colorScheme = Theme.of(context).colorScheme;
       return SliverToBoxAdapter(
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 60),
+          padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 32),
           child: Center(
-            child: Text(
-              emptyMessage,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: colorScheme.onSurfaceVariant),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (emptyIcon != null) ...[
+                  Icon(
+                    emptyIcon,
+                    size: 40,
+                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+                Text(
+                  emptyMessage,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: colorScheme.onSurfaceVariant,
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -66,25 +91,31 @@ class ProductGridSliver extends StatelessWidget {
             product: product,
             onTap: () {
               Navigator.of(context).push(
-                MaterialPageRoute(
+                KrazePageRoute(
                   builder: (_) => ProductDetailPage(
                     product: product,
-                    onFavoriteTap: () => _showFavoriteSnack(context),
                   ),
                 ),
               );
             },
-            onFavoriteTap: () => _showFavoriteSnack(context),
+            onFavoriteTap: () => _toggleFavorite(context, product),
           );
         }, childCount: products.length),
       ),
     );
   }
 
-  void _showFavoriteSnack(BuildContext context) {
-    // Will call favorites_service.dart once that exists.
+  void _toggleFavorite(BuildContext context, Product product) {
+    marketplaceStore.toggleFavorite(product.id);
+    final isNowFavorite = marketplaceStore.products
+        .firstWhere((item) => item.id == product.id)
+        .isFavorite;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Added to favorites')),
+      SnackBar(
+        content: Text(
+          isNowFavorite ? 'Added to favorites' : 'Removed from favorites',
+        ),
+      ),
     );
   }
 }

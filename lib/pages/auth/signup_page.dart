@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/app_text_styles.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/custom_button.dart';
+import '../../widgets/kraze_page_route.dart';
 import '../home/home_page.dart';
 import 'auth_widgets.dart';
 
@@ -54,7 +56,7 @@ class _SignupPageState extends State<SignupPage> {
     // Same as Login: clear the whole auth stack so Home is the new
     // "root" the back button respects.
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const HomePage()),
+      KrazePageRoute(builder: (_) => const HomePage()),
       (route) => false,
     );
   }
@@ -78,7 +80,22 @@ class _SignupPageState extends State<SignupPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 32),
+                    ShaderMask(
+                      shaderCallback: (bounds) =>
+                          AppGradients.brand.createShader(bounds),
+                      child: const Text(
+                        'K',
+                        style: TextStyle(
+                          fontFamily: 'Glitch',
+                          fontSize: 34,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          height: 1,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     Text(
                       'Sign Up',
                       style: TextStyle(
