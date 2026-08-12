@@ -1,17 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../../constants/categories.dart';
-import '../../models/product.dart';
-import '../../theme/app_text_styles.dart';
-import '../../widgets/product_grid.dart';
+import 'package:kraze_student_marketplace/constants/categories.dart';
+import 'package:kraze_student_marketplace/models/product.dart';
+import 'package:kraze_student_marketplace/services/marketplace_store.dart';
+import 'package:kraze_student_marketplace/theme/app_text_styles.dart';
+import 'package:kraze_student_marketplace/widgets/product_grid.dart';
+import 'package:kraze_student_marketplace/widgets/kraze_page_route.dart';
 
-/// The Search screen — reached by tapping the search bar on Home.
-///
-/// WHY StatefulWidget:
-/// This screen needs to remember what the student has typed
-/// (TextEditingController) and re-filter the product list every time
-/// that text changes — both of those are things that change WHILE the
-/// screen is open, which is exactly what State objects are for.
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
 
@@ -21,9 +16,6 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   final _controller = TextEditingController();
-  // FocusNode lets us request the keyboard open automatically the
-  // instant this screen appears, so the student can start typing right
-  // away without an extra tap.
   final _focusNode = FocusNode();
 
   String _query = '';
@@ -31,10 +23,6 @@ class _SearchPageState extends State<SearchPage> {
   @override
   void initState() {
     super.initState();
-    // WidgetsBinding.instance.addPostFrameCallback runs this AFTER the
-    // first frame has been drawn. Requesting focus any earlier (directly
-    // in initState) can be unreliable, since the field isn't fully laid
-    // out on screen yet at that point.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
     });
@@ -47,23 +35,17 @@ class _SearchPageState extends State<SearchPage> {
     super.dispose();
   }
 
-  /// Products whose title OR category contains the search text
-  /// (case-insensitive). Matching on category too means typing
-  /// "laptop" finds both a title like "HP Pavilion Laptop" AND anything
-  /// tagged with the "Laptops" category.
   List<Product> get _results {
     final query = _query.trim().toLowerCase();
     if (query.isEmpty) return [];
 
-    return sampleProducts.where((product) {
+    return marketplaceStore.products.where((product) {
       final title = product.title.toLowerCase();
       final category = product.category.toLowerCase();
       return title.contains(query) || category.contains(query);
     }).toList();
   }
 
-  /// Fills the search field with a tapped category name, as a fast way
-  /// to browse by category without typing.
   void _searchCategory(String categoryName) {
     _controller.text = categoryName;
     setState(() => _query = categoryName);
@@ -95,7 +77,6 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  /// Back arrow + text field, laid out like a single search bar row.
   Widget _buildSearchBar(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -125,9 +106,6 @@ class _SearchPageState extends State<SearchPage> {
                       controller: _controller,
                       focusNode: _focusNode,
                       style: TextStyle(color: colorScheme.onSurface),
-                      // onChanged fires on every keystroke — this is
-                      // what makes results update live as you type,
-                      // rather than needing a separate "Search" button.
                       onChanged: (value) => setState(() => _query = value),
                       decoration: InputDecoration(
                         hintText: 'Search textbooks, laptops, phones...',
@@ -143,9 +121,6 @@ class _SearchPageState extends State<SearchPage> {
                       ),
                     ),
                   ),
-                  // The clear ("x") button only appears once something
-                  // has been typed — no point showing it on an empty
-                  // field.
                   if (_controller.text.isNotEmpty)
                     GestureDetector(
                       onTap: () {
@@ -167,8 +142,6 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  /// Shown before the student has typed anything — lets them jump
-  /// straight into a category instead of staring at a blank screen.
   Widget _buildCategorySuggestions(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -228,8 +201,6 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  /// "3 results for 'laptop'" — confirms to the student what they're
-  /// looking at before the grid below it.
   Widget _buildResultsHeader(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final count = _results.length;

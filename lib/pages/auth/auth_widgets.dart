@@ -54,7 +54,12 @@ class AuthDivider extends StatelessWidget {
 /// account). Tapping these currently shows what's still needed, the same
 /// way Message Seller does until Chat exists.
 class SocialSignInRow extends StatelessWidget {
-  const SocialSignInRow({super.key});
+  /// When provided, tapping "Google" calls this instead of showing the
+  /// "coming soon" placeholder — used once AuthService.signInWithGoogle()
+  /// is wired up (see login_page.dart / signup_page.dart).
+  final VoidCallback? onGooglePressed;
+
+  const SocialSignInRow({super.key, this.onGooglePressed});
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +76,7 @@ class SocialSignInRow extends StatelessWidget {
             // `font_awesome_flutter` package for a closer "G" icon.
             label: 'Google',
             icon: Icons.g_mobiledata,
-            onTap: () => _showComingSoon(context, 'Google'),
+            onTap: onGooglePressed ?? () => _showComingSoon(context, 'Google'),
           ),
         ),
       ],

@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 
-import '../../constants/categories.dart';
-import '../../models/product.dart';
-import '../../services/marketplace_store.dart';
-import '../../theme/app_text_styles.dart';
-import '../../widgets/bottom_nav_bar.dart';
-import '../../widgets/kraze_page_route.dart';
-import '../../widgets/product_grid.dart';
-import '../chat/messages_page.dart';
-import '../favorites/favorites_page.dart';
-import '../post_item/post_item_page.dart';
-import '../profile/profile_page.dart';
-import '../search/search_page.dart';
+import 'package:kraze_student_marketplace/constants/categories.dart';
+import 'package:kraze_student_marketplace/models/product.dart';
+import 'package:kraze_student_marketplace/services/marketplace_store.dart';
+import 'package:kraze_student_marketplace/theme/app_text_styles.dart';
+import 'package:kraze_student_marketplace/widgets/bottom_nav_bar.dart';
+import 'package:kraze_student_marketplace/widgets/kraze_page_route.dart';
+import 'package:kraze_student_marketplace/widgets/product_grid.dart';
+import 'package:kraze_student_marketplace/widgets/product_image.dart';
+import 'package:kraze_student_marketplace/pages/chat/messages_page.dart';
+import 'package:kraze_student_marketplace/pages/favorites/favorites_page.dart';
+import 'package:kraze_student_marketplace/pages/post_item/post_item_page.dart';
+import 'package:kraze_student_marketplace/pages/profile/profile_page.dart';
+import 'package:kraze_student_marketplace/pages/search/search_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -37,9 +38,6 @@ class _HomePageState extends State<HomePage> {
               switchOutCurve: Curves.easeIn,
               transitionBuilder: (child, animation) =>
                   FadeTransition(opacity: animation, child: child),
-              // A KeyedSubtree keyed on the tab index tells AnimatedSwitcher
-              // "this is a different screen" — without a key it can't tell
-              // FavoritesPage apart from ProfilePage and won't animate.
               child: KeyedSubtree(
                 key: ValueKey(_selectedTab),
                 child: _buildCurrentTab(),
@@ -66,6 +64,7 @@ class _HomePageState extends State<HomePage> {
             setState(() => _selectedCategory = category);
           },
           onProfileTap: () => setState(() => _selectedTab = 4),
+          onNotificationTap: () => setState(() => _selectedTab = 3),
         ),
     };
   }
@@ -86,11 +85,13 @@ class _MarketplaceTab extends StatelessWidget {
     required this.selectedCategory,
     required this.onCategorySelected,
     required this.onProfileTap,
+    required this.onNotificationTap,
   });
 
   final String selectedCategory;
   final ValueChanged<String> onCategorySelected;
   final VoidCallback onProfileTap;
+  final VoidCallback onNotificationTap;
 
   @override
   Widget build(BuildContext context) {
@@ -117,10 +118,6 @@ class _MarketplaceTab extends StatelessWidget {
     );
   }
 
-  // =================================================================
-  // TOP BAR — small Glitch-font "K" mark + wordmark reads as branded
-  // without repeating the full Splash treatment.
-  // =================================================================
   Widget _buildTopBar(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return Padding(
@@ -128,33 +125,49 @@ class _MarketplaceTab extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              ShaderMask(
-                shaderCallback: (bounds) =>
-                    AppGradients.brand.createShader(bounds),
-                child: const Text(
-                  'K',
-                  style: TextStyle(
-                    fontFamily: 'Glitch',
-                    fontSize: 30,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    height: 1,
+          Flexible(
+            child: Row(
+              children: [
+                ShaderMask(
+                  shaderCallback: (bounds) =>
+                      AppGradients.brand.createShader(bounds),
+                  child: const Text(
+                    'K',
+                    style: TextStyle(
+                      fontFamily: 'Glitch',
+                      fontSize: 30,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      height: 1,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              const Text('Marketplace', style: AppTextStyles.sectionTitle),
-            ],
+                const SizedBox(width: 8),
+                const Flexible(
+                  child: Text(
+                    'Marketplace',
+                    style: AppTextStyles.sectionTitle,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
           ),
           Row(
             children: [
-              IconButton(
-                icon: const Icon(Icons.notifications_none),
-                onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('You are all caught up.')),
-                ),
+              ListenableBuilder(
+                listenable: marketplaceStore,
+                builder: (context, _) {
+                  final count = marketplaceStore.unreadConversationCount;
+                  return Badge(
+                    label: Text('$count'),
+                    isLabelVisible: count > 0,
+                    child: IconButton(
+                      icon: const Icon(Icons.notifications_none),
+                      onPressed: onNotificationTap,
+                    ),
+                  );
+                },
               ),
               const SizedBox(width: 4),
               InkWell(
@@ -163,7 +176,13 @@ class _MarketplaceTab extends StatelessWidget {
                 child: CircleAvatar(
                   radius: 20,
                   backgroundColor: colorScheme.primaryContainer,
-                  child: Icon(Icons.person, color: colorScheme.primary),
+                  child: ClipOval(
+                    child: SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: _buildProfileIcon(colorScheme),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -171,6 +190,14 @@ class _MarketplaceTab extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildProfileIcon(ColorScheme colorScheme) {
+    final profile = marketplaceStore.currentProfile;
+    if (profile == null || profile.photoUrl.isEmpty) {
+      return Icon(Icons.person, color: colorScheme.primary);
+    }
+    return ProductImage(imagePath: profile.photoUrl);
   }
 
   Widget _buildSearchShortcut(BuildContext context) {

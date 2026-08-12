@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 
-import '../../models/conversation.dart';
-import '../../services/marketplace_store.dart';
-import '../../theme/app_text_styles.dart';
-import '../../widgets/kraze_page_route.dart';
-import '../../widgets/seller_avatar.dart';
-import 'chat_page.dart';
+import 'package:kraze_student_marketplace/models/conversation.dart';
+import 'package:kraze_student_marketplace/services/marketplace_store.dart';
+import 'package:kraze_student_marketplace/theme/app_text_styles.dart';
+import 'package:kraze_student_marketplace/widgets/kraze_page_route.dart';
+import 'package:kraze_student_marketplace/widgets/seller_avatar.dart';
+import 'package:kraze_student_marketplace/pages/chat/chat_page.dart';
 
 class MessagesPage extends StatelessWidget {
   const MessagesPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final conversations = marketplaceStore.conversations;
+    final List<Conversation> conversations = marketplaceStore.conversations;
     if (conversations.isEmpty) {
       return const _EmptyMessages();
     }
@@ -20,23 +20,20 @@ class MessagesPage extends StatelessWidget {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 90),
       itemCount: conversations.length + 1,
-      separatorBuilder: (_, index) =>
+      separatorBuilder: (BuildContext context, int index) =>
           index == 0 ? const SizedBox(height: 4) : const Divider(height: 1),
-      itemBuilder: (context, index) {
+      itemBuilder: (BuildContext context, int index) {
         if (index == 0) {
           return const Padding(
             padding: EdgeInsets.only(bottom: 16),
             child: Text('Messages', style: AppTextStyles.pageTitle),
           );
         }
-        final conversation = conversations[index - 1];
-        final message = conversation.lastMessage;
-        // A lightweight, visual-only "unread" cue: the most recent
-        // message in the thread came from the other person and hasn't
-        // been replied to yet. There's no persisted read/unread state
-        // in the data model yet, so this stays a simple, honest signal
-        // rather than inventing one.
-        final isUnread = message != null && !message.isMine;
+        final Conversation conversation = conversations[index - 1];
+        final ChatMessage? message = conversation.lastMessage;
+        
+        // Use the proper unread state from the model
+        final bool isUnread = conversation.isUnread;
 
         return ListTile(
           contentPadding: const EdgeInsets.symmetric(vertical: 10),
@@ -103,9 +100,9 @@ class MessagesPage extends StatelessWidget {
     return '$hour:$minute';
   }
 
-  void _openChat(BuildContext context, Conversation conversation) {
+  void _openChat(BuildContext context, dynamic conversation) {
     Navigator.of(context).push(
-      KrazePageRoute(builder: (_) => ChatPage(conversation: conversation)),
+      KrazePageRoute(builder: (BuildContext context) => ChatPage(conversation: conversation)),
     );
   }
 }

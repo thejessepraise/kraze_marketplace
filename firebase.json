@@ -1,1 +1,26 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"krazemarketplace","appId":"1:26321643703:android:637dda56651cbb334dc532","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"krazemarketplace","configurations":{"android":"1:26321643703:android:637dda56651cbb334dc532","web":"1:26321643703:web:8e28888ff2b61c544dc532"}}}}}}
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "krazemarketplace",
+          "appId": "1:26321643703:android:637dda56651cbb334dc532",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "krazemarketplace",
+          "configurations": {
+            "android": "1:26321643703:android:637dda56651cbb334dc532",
+            "web": "1:26321643703:web:8e28888ff2b61c544dc532"
+          }
+        }
+      }
+    }
+  }
+}

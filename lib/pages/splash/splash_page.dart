@@ -1,8 +1,10 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
 import '../../widgets/kraze_page_route.dart';
 import '../auth/login_page.dart';
+import '../home/home_page.dart';
 
 /// The very first screen a student sees when the app launches — shows the
 /// Kraze logo/branding briefly, then moves on to the next screen.
@@ -13,14 +15,11 @@ import '../auth/login_page.dart';
 /// checking "is this student already logged in?", loading saved settings,
 /// etc.
 ///
-/// WHY THIS GOES TO LOGIN (not Home) NOW:
-/// Now that Login/Signup exist, Splash always sends the user to Login for
-/// the moment — there's no real "remember me" / persisted session yet
-/// (that needs Firebase Auth's own session-restore, or something like
-/// shared_preferences). Once that's wired up, _goToNextScreen() below is
-/// exactly where the real check goes: "if there's a saved, still-valid
-/// session -> go straight to Home; otherwise -> Login" — the rest of
-/// this file wouldn't need to change.
+/// WHERE THE STUDENT GOES NEXT:
+/// Splash checks FirebaseAuth.instance.currentUser once the 2-second
+/// delay ends. Firebase Auth persists sessions across app restarts on
+/// its own, so a previously-signed-in student goes straight to Home;
+/// anyone else lands on Login.
 ///
 /// WHY StatefulWidget:
 /// This screen needs to run some code automatically the moment it
@@ -57,14 +56,22 @@ class _SplashPageState extends State<SplashPage> {
     // Navigator on a screen that's already gone would crash the app.
     if (!mounted) return;
 
-    // pushReplacement (not push) swaps Splash out for Login entirely,
-    // rather than stacking Login on top of it. This means pressing the
-    // phone's back button on Login won't take the student back to the
-    // splash screen — exactly what you want, since there's nothing
-    // useful to go "back" to on a splash screen.
-    Navigator.of(
-      context,
-    ).pushReplacement(KrazePageRoute(builder: (_) => const LoginPage()));
+    // Firebase Auth persists the session across app restarts on its
+    // own — currentUser is already restored by the time this runs
+    // (Firebase.initializeApp() in main.dart finished before runApp).
+    // A signed-in student skips Login entirely; everyone else sees it.
+    final isSignedIn = FirebaseAuth.instance.currentUser != null;
+
+    // pushReplacement (not push) swaps Splash out entirely, rather than
+    // stacking the next screen on top of it. This means pressing the
+    // phone's back button won't take the student back to the splash
+    // screen — exactly what you want, since there's nothing useful to
+    // go "back" to on a splash screen.
+    Navigator.of(context).pushReplacement(
+      KrazePageRoute(
+        builder: (_) => isSignedIn ? const HomePage() : const LoginPage(),
+      ),
+    );
   }
 
   @override

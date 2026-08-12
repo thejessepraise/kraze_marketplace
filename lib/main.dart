@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'theme/dark_theme.dart';
 import 'pages/splash/splash_page.dart';
 
 /// The very first function that runs when the app launches.
 /// runApp() takes a widget and makes it the root of the entire app.
-void main() {
+void main() async {
+  // Firebase needs the Flutter binding ready before it can talk to
+  // platform channels, and initializeApp() must finish before any
+  // screen tries to touch Auth/Firestore/Storage.
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const KrazeMarketplaceApp());
 }
 

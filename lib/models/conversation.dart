@@ -17,14 +17,16 @@ class Conversation {
     this.sellerPhone = '',
     required this.productTitle,
     required this.productImageUrl,
-    required this.messages,
+    this.isUnread = false, // Added for notification clearing
+    this.messages = const [],
   });
 
   final String id;
   final String sellerName;
-  final String sellerPhone; // empty string if the seller has none on file
+  final String sellerPhone;
   final String productTitle;
   final String productImageUrl;
+  final bool isUnread;
   final List<ChatMessage> messages;
 
   ChatMessage? get lastMessage => messages.isEmpty ? null : messages.last;

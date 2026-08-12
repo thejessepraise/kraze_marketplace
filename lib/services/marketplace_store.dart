@@ -1,78 +1,420 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
 
-import '../models/conversation.dart';
-import '../models/product.dart';
+import 'package:kraze_student_marketplace/models/conversation.dart';
+import 'package:kraze_student_marketplace/models/product.dart';
+import 'package:kraze_student_marketplace/models/user_profile.dart';
+import 'package:kraze_student_marketplace/services/profile_service.dart';
 
+/// Central app state, now backed by Firestore instead of an in-memory
+/// list.
 class MarketplaceStore extends ChangeNotifier {
-  final List<Product> _products = List<Product>.from(sampleProducts);
-  final List<Conversation> _conversations = [];
+  MarketplaceStore({FirebaseFirestore? firestore, ProfileService? profileService})
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _profileService = profileService ?? ProfileService() {
+    FirebaseAuth.instance.authStateChanges().listen(_onAuthChanged);
+  }
 
-  List<Product> get products => List<Product>.unmodifiable(_products);
+  final FirebaseFirestore _firestore;
+  final ProfileService _profileService;
 
-  List<Product> get favoriteProducts => _products
-      .where((product) => product.isFavorite)
+  List<Product> _products = [];
+  Set<String> _favoriteIds = {};
+  List<Conversation> _conversations = [];
+  UserProfile? _profile;
+
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _productsSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _favoritesSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _conversationsSub;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _profileSub;
+
+  String? get _uid => FirebaseAuth.instance.currentUser?.uid;
+
+  List<Product> get products => _products
+      .map((p) => p.copyWith(isFavorite: _favoriteIds.contains(p.id)))
       .toList(growable: false);
 
+  List<Product> get favoriteProducts =>
+      products.where((product) => product.isFavorite).toList(growable: false);
+
   List<Product> get myProducts => _products
-      .where((product) => product.sellerName == _currentSellerName)
+      .where((product) => product.sellerId == _uid)
+      .map((p) => p.copyWith(isFavorite: _favoriteIds.contains(p.id)))
       .toList(growable: false);
 
   List<Conversation> get conversations =>
       List<Conversation>.unmodifiable(_conversations);
 
-  static const String _currentSellerName = 'JessePraise.';
-
-  void addProduct(Product product) {
-    _products.insert(0, product);
-    notifyListeners();
+  /// Returns the number of conversations with new messages since the user
+  /// last viewed them.
+  int get unreadConversationCount {
+    return _conversations.where((c) => c.isUnread).length;
   }
 
-  void toggleFavorite(String productId) {
-    final index = _products.indexWhere((product) => product.id == productId);
-    if (index == -1) return;
+  UserProfile? get currentProfile => _profile;
 
-    final product = _products[index];
-    _products[index] = product.copyWith(isFavorite: !product.isFavorite);
-    notifyListeners();
+  void _onAuthChanged(User? user) {
+    _productsSub ??= _firestore
+        .collection('products')
+        .snapshots()
+        .listen((snapshot) {
+          try {
+            final list = snapshot.docs
+                .map((doc) => Product.fromDoc(doc))
+                .where((p) => p.status == 'active')
+                .toList();
+            
+            list.sort((a, b) => b.postedAt.compareTo(a.postedAt));
+
+            _products = list;
+            notifyListeners();
+          } catch (e) {
+            debugPrint('Error parsing products: $e');
+          }
+        }, onError: (e) {
+          debugPrint('Firestore products subscription error: $e');
+        });
+
+    _favoritesSub?.cancel();
+    _conversationsSub?.cancel();
+    _profileSub?.cancel();
+
+    if (user == null) {
+      _favoriteIds = {};
+      _conversations = [];
+      _profile = null;
+      notifyListeners();
+      return;
+    }
+
+    _favoritesSub = _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('favorites')
+        .snapshots()
+        .listen((snapshot) {
+          _favoriteIds = snapshot.docs.map((doc) => doc.id).toSet();
+          notifyListeners();
+        }, onError: (e) {
+          debugPrint('Firestore favorites subscription error: $e');
+        });
+
+    _conversationsSub = _firestore
+        .collection('conversations')
+        .where('participantIds', arrayContains: user.uid)
+        .snapshots()
+        .listen((snapshot) {
+          try {
+            final list = snapshot.docs
+                .map((doc) => _conversationFromDoc(doc, user.uid))
+                .toList();
+            
+            list.sort((a, b) {
+              final aTime = a.lastMessage?.sentAt ?? DateTime(0);
+              final bTime = b.lastMessage?.sentAt ?? DateTime(0);
+              return bTime.compareTo(aTime);
+            });
+
+            _conversations = list;
+            notifyListeners();
+          } catch (e) {
+            debugPrint('Error parsing conversations: $e');
+          }
+        }, onError: (e) {
+          debugPrint('Firestore conversations subscription error: $e');
+        });
+
+    _profileSub = _firestore
+        .collection('users')
+        .doc(user.uid)
+        .snapshots()
+        .listen((doc) async {
+          if (!doc.exists) {
+            await _profileService.createProfile(
+              uid: user.uid,
+              name: user.displayName ?? 'Student',
+              email: user.email ?? '',
+            );
+          } else {
+            _profile = UserProfile.fromDoc(doc);
+            notifyListeners();
+          }
+        });
   }
 
-  Conversation openConversation(Product product) {
-    final existing = _conversations.where(
-      (conversation) => conversation.id == product.id,
+  Conversation _conversationFromDoc(
+    DocumentSnapshot<Map<String, dynamic>> doc,
+    String uid,
+  ) {
+    final data = doc.data() ?? const {};
+    final isSeller = data['sellerId'] == uid;
+    final otherName = (isSeller ? data['buyerName'] : data['sellerName'])
+            as String? ??
+        'Student';
+    final otherPhone = (isSeller ? data['buyerPhone'] : data['sellerPhone'])
+            as String? ??
+        '';
+    final lastText = (data['lastMessageText'] as String?) ?? '';
+    final lastAt = (data['lastMessageAt'] as Timestamp?)?.toDate();
+    final lastSenderId = data['lastMessageSenderId'] as String?;
+
+    // Unread logic: Compare the last message time with the user's last read time.
+    final lastReadAt = isSeller
+        ? (data['sellerLastReadAt'] as Timestamp?)?.toDate()
+        : (data['buyerLastReadAt'] as Timestamp?)?.toDate();
+    
+    final hasNewMessage = lastAt != null && 
+        (lastReadAt == null || lastAt.isAfter(lastReadAt)) &&
+        lastSenderId != uid;
+
+    return Conversation(
+      id: doc.id,
+      sellerName: otherName,
+      sellerPhone: otherPhone,
+      productTitle: (data['productTitle'] as String?) ?? '',
+      productImageUrl: (data['productImageUrl'] as String?) ?? '',
+      isUnread: hasNewMessage,
+      messages: lastText.isEmpty
+          ? const []
+          : [
+              ChatMessage(
+                text: lastText,
+                sentAt: lastAt ?? DateTime.now(),
+                isMine: lastSenderId == uid,
+              ),
+            ],
     );
-    if (existing.isNotEmpty) return existing.first;
-
-    final conversation = Conversation(
-      id: product.id,
-      sellerName: product.sellerName,
-      sellerPhone: product.sellerPhone,
-      productTitle: product.title,
-      productImageUrl: product.imageUrl,
-      messages: [
-        ChatMessage(
-          text: 'Hi! Is this still available?',
-          sentAt: DateTime.now(),
-          isMine: true,
-        ),
-      ],
-    );
-    _conversations.insert(0, conversation);
-    notifyListeners();
-    return conversation;
   }
 
-  void sendMessage(String conversationId, String text) {
+  Future<void> createListing({
+    required String title,
+    required double price,
+    required String category,
+    required String description,
+    XFile? imageFile,
+  }) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw StateError('You must be signed in to post a listing.');
+    }
+
+    final listingsCol = _firestore.collection('products');
+    final docRef = listingsCol.doc();
+
+    String imageUrl = '';
+    if (imageFile != null) {
+      // Store custom image as a compressed Base64 string to keep it free.
+      final bytes = await imageFile.readAsBytes();
+      final base64String = base64Encode(bytes);
+      imageUrl = 'data:image/jpeg;base64,$base64String';
+    }
+
+    final product = Product(
+      id: docRef.id,
+      title: title,
+      price: price,
+      category: category,
+      sellerName: _profile?.name ?? user.displayName ?? 'Student Seller',
+      sellerId: user.uid,
+      sellerPhone: _profile?.phone ?? '',
+      postedAt: DateTime.now(),
+      imageUrl: imageUrl,
+      description: description,
+    );
+
+    await docRef.set(product.toMap());
+  }
+
+  Future<void> updateListing({
+    required String productId,
+    required String title,
+    required double price,
+    required String category,
+    required String description,
+    XFile? imageFile,
+  }) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final update = <String, dynamic>{
+      'title': title,
+      'price': price,
+      'category': category,
+      'description': description,
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+
+    if (imageFile != null) {
+      final bytes = await imageFile.readAsBytes();
+      final base64String = base64Encode(bytes);
+      update['imageUrl'] = 'data:image/jpeg;base64,$base64String';
+    }
+
+    await _firestore.collection('products').doc(productId).update(update);
+  }
+
+  Future<void> deleteListing(String productId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    await _firestore.collection('products').doc(productId).delete();
+  }
+
+  Future<void> toggleFavorite(String productId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final isFavorited = _favoriteIds.contains(productId);
+    _favoriteIds = isFavorited
+        ? (_favoriteIds.toSet()..remove(productId))
+        : (_favoriteIds.toSet()..add(productId));
+    notifyListeners();
+
+    final favRef = _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('favorites')
+        .doc(productId);
+
+    try {
+      if (isFavorited) {
+        await favRef.delete();
+      } else {
+        await favRef.set({'createdAt': FieldValue.serverTimestamp()});
+      }
+    } catch (_) {}
+  }
+
+  Future<Conversation> openConversation(Product product) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw StateError('You must be signed in to message a seller.');
+    }
+
+    final conversationId = '${product.id}_${user.uid}';
+    final docRef = _firestore.collection('conversations').doc(conversationId);
+    final existing = await docRef.get();
+
+    if (!existing.exists) {
+      await docRef.set({
+        'productId': product.id,
+        'productTitle': product.title,
+        'productImageUrl': product.imageUrl,
+        'sellerId': product.sellerId,
+        'sellerName': product.sellerName,
+        'sellerPhone': product.sellerPhone,
+        'buyerId': user.uid,
+        'buyerName': _profile?.name ?? user.displayName ?? 'Student',
+        'buyerPhone': _profile?.phone ?? '',
+        'participantIds': [product.sellerId, user.uid],
+        'lastMessageText': '',
+        'lastMessageSenderId': '',
+        'lastMessageAt': FieldValue.serverTimestamp(),
+        'createdAt': FieldValue.serverTimestamp(),
+        'buyerLastReadAt': FieldValue.serverTimestamp(),
+        'sellerLastReadAt': null,
+      });
+    } else {
+      await markAsRead(conversationId);
+    }
+
+    final doc = await docRef.get();
+    return _conversationFromDoc(doc, user.uid);
+  }
+
+  Future<void> markAsRead(String conversationId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final docRef = _firestore.collection('conversations').doc(conversationId);
+    final doc = await docRef.get();
+    if (!doc.exists) return;
+
+    final data = doc.data()!;
+    final isSeller = data['sellerId'] == user.uid;
+    final field = isSeller ? 'sellerLastReadAt' : 'buyerLastReadAt';
+
+    await docRef.update({field: FieldValue.serverTimestamp()});
+  }
+
+  Future<void> sendMessage(String conversationId, String text) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
     final trimmedText = text.trim();
     if (trimmedText.isEmpty) return;
 
-    final conversation = _conversations.firstWhere(
-      (item) => item.id == conversationId,
-    );
-    conversation.messages.add(
-      ChatMessage(text: trimmedText, sentAt: DateTime.now(), isMine: true),
-    );
-    notifyListeners();
+    final convRef = _firestore.collection('conversations').doc(conversationId);
+    final batch = _firestore.batch();
+    
+    final msgRef = convRef.collection('messages').doc();
+    batch.set(msgRef, {
+      'text': trimmedText,
+      'senderId': user.uid,
+      'sentAt': FieldValue.serverTimestamp(),
+    });
+
+    final doc = await convRef.get();
+    final data = doc.data()!;
+    final isSeller = data['sellerId'] == user.uid;
+    final readField = isSeller ? 'sellerLastReadAt' : 'buyerLastReadAt';
+
+    batch.update(convRef, {
+      'lastMessageText': trimmedText,
+      'lastMessageSenderId': user.uid,
+      'lastMessageAt': FieldValue.serverTimestamp(),
+      readField: FieldValue.serverTimestamp(),
+    });
+
+    await batch.commit();
+  }
+
+  Stream<List<ChatMessage>> watchMessages(String conversationId) {
+    final uid = _uid;
+    return _firestore
+        .collection('conversations')
+        .doc(conversationId)
+        .collection('messages')
+        .snapshots()
+        .map((snapshot) {
+          final list = snapshot.docs.map((doc) {
+            final data = doc.data();
+            return ChatMessage(
+              text: (data['text'] as String?) ?? '',
+              sentAt: (data['sentAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+              isMine: data['senderId'] == uid,
+            );
+          }).toList();
+
+          list.sort((a, b) => a.sentAt.compareTo(b.sentAt));
+          return list;
+        });
+  }
+
+  Future<void> updateProfile({String? name, String? phone}) async {
+    final uid = _uid;
+    if (uid == null) return;
+    await _profileService.updateProfile(uid: uid, name: name, phone: phone);
+  }
+
+  Future<void> uploadAvatar(XFile image) async {
+    final uid = _uid;
+    if (uid == null) return;
+    await _profileService.uploadAvatar(uid: uid, image: image);
+  }
+
+  @override
+  void dispose() {
+    _productsSub?.cancel();
+    _favoritesSub?.cancel();
+    _conversationsSub?.cancel();
+    _profileSub?.cancel();
+    super.dispose();
   }
 }
 
-final marketplaceStore = MarketplaceStore();
+final MarketplaceStore marketplaceStore = MarketplaceStore();

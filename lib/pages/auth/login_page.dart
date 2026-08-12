@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../services/app_error.dart';
+import '../../services/auth_service.dart';
 import '../../theme/app_text_styles.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/custom_button.dart';
@@ -30,6 +32,8 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  final _authService = AuthService();
+
   bool _isLoading = false;
 
   @override
@@ -49,14 +53,21 @@ class _LoginPageState extends State<LoginPage> {
 
     setState(() => _isLoading = true);
 
-    // WHERE REAL AUTH GOES:
-    // This delay stands in for a real network call, e.g.
-    // await authService.signIn(email, password);
-    // once services/auth_service.dart and Firebase exist. For now we
-    // just simulate "it worked" after a short pause.
-    await Future.delayed(const Duration(milliseconds: 900));
+    try {
+      await _authService.signIn(
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(userMessage(error))));
+      return;
+    }
 
-    // Guard against the screen having been closed during the delay
+    // Guard against the screen having been closed during the request
     // (e.g. the user backed out) before touching it again.
     if (!mounted) return;
 
@@ -66,6 +77,32 @@ class _LoginPageState extends State<LoginPage> {
     // stack entirely, replacing them with Home. This means the phone's
     // back button from Home exits the app rather than returning to the
     // login screen — the correct behavior once someone is "logged in".
+    Navigator.of(context).pushAndRemoveUntil(
+      KrazePageRoute(builder: (_) => const HomePage()),
+      (route) => false,
+    );
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() => _isLoading = true);
+    try {
+      final credential = await _authService.signInWithGoogle();
+      if (credential == null) {
+        // Student closed the account picker — not an error.
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(userMessage(error))));
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
     Navigator.of(context).pushAndRemoveUntil(
       KrazePageRoute(builder: (_) => const HomePage()),
       (route) => false,
@@ -218,7 +255,7 @@ class _LoginPageState extends State<LoginPage> {
 
                     const AuthDivider(label: 'Or sign in with'),
                     const SizedBox(height: 20),
-                    const SocialSignInRow(),
+                    SocialSignInRow(onGooglePressed: _handleGoogleSignIn),
                     const SizedBox(height: 32),
                   ],
                 ),

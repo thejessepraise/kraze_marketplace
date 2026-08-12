@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/marketplace_store.dart';
 
 /// The bottom navigation bar: Home, Favorites, Sell (center, highlighted),
 /// Chat, Profile.
@@ -43,7 +44,19 @@ class AppBottomNavBar extends StatelessWidget {
             _navIcon(context, icon: Icons.home_outlined, index: 0),
             _navIcon(context, icon: Icons.favorite_border, index: 1),
             _sellButton(context),
-            _navIcon(context, icon: Icons.chat_bubble_outline, index: 3),
+            // ListenableBuilder ensures the badge number updates in real-time
+            // when a new message arrives from Firestore.
+            ListenableBuilder(
+              listenable: marketplaceStore,
+              builder: (context, _) {
+                final count = marketplaceStore.unreadConversationCount;
+                return Badge(
+                  label: Text('$count'),
+                  isLabelVisible: count > 0,
+                  child: _navIcon(context, icon: Icons.chat_bubble_outline, index: 3),
+                );
+              },
+            ),
             _navIcon(context, icon: Icons.person_outline, index: 4),
           ],
         ),

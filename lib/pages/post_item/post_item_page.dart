@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../constants/categories.dart';
-import '../../models/product.dart';
+import '../../services/app_error.dart';
 import '../../services/marketplace_store.dart';
 import '../../theme/app_text_styles.dart';
 import '../../widgets/custom_text_field.dart';
@@ -18,16 +18,12 @@ import '../../widgets/product_image.dart';
 /// screen is open: which category chip is selected, and which photo (if
 /// any) has been picked from the device.
 ///
-/// WHERE THE NEW LISTING GOES (NO BACKEND YET):
-/// There's no database yet, so "posting" an item means adding a new
-/// Product straight onto the in-memory `sampleProducts` list from
-/// models/product.dart — the exact same list Home already reads from.
-/// Home just needs to rebuild after this page closes to pick it up (see
-/// home_page.dart's Sell tab handling). Once Firebase is wired in, this is
-/// the one spot that changes: instead of `sampleProducts.insert(...)`,
-/// _handlePost() will call something like
-/// `productService.createListing(...)` and let the real database be the
-/// single source of truth.
+/// WHERE THE NEW LISTING GOES:
+/// _handlePost() calls marketplaceStore.createListing(), which uploads
+/// the photo to Firebase Storage (if one was picked), then writes the
+/// listing to the `products` collection in Firestore. Home's live
+/// Firestore listener picks up the new document automatically — no
+/// manual refresh needed.
 class PostItemPage extends StatefulWidget {
   const PostItemPage({super.key});
 
@@ -69,11 +65,11 @@ class _PostItemPageState extends State<PostItemPage> {
     // already has, not something they want to photograph right now.
     final XFile? picked = await picker.pickImage(
       source: ImageSource.gallery,
-      // Caps the resolution so a listing photo doesn't balloon into a
-      // multi-megabyte file for no visual benefit at the sizes this app
-      // actually displays it.
-      maxWidth: 1600,
-      imageQuality: 85,
+      // Optimized for high quality while ensuring the Base64 string 
+      // stays well within Firestore's 1MB document limit.
+      maxWidth: 640,
+      maxHeight: 640,
+      imageQuality: 60,
     );
 
     if (picked == null) return; // student backed out of the picker
@@ -95,34 +91,26 @@ class _PostItemPageState extends State<PostItemPage> {
 
     setState(() => _isLoading = true);
 
-    // WHERE REAL POSTING GOES:
-    // await productService.createListing(...); once a backend exists.
-    // For now we just simulate "it worked" after a short pause, the same
-    // pattern login_page.dart and signup_page.dart use.
-    await Future.delayed(const Duration(milliseconds: 900));
+    try {
+      await marketplaceStore.createListing(
+        title: _titleController.text.trim(),
+        price: double.parse(_priceController.text.trim()),
+        category: _selectedCategory!,
+        description: _descriptionController.text.trim(),
+        imageFile: _pickedImage,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(userMessage(error))));
+      return;
+    }
 
     if (!mounted) return;
 
-    final newProduct = Product(
-      // A real id would come from the database. For now, the current
-      // timestamp is good enough to be unique among sample data.
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      title: _titleController.text.trim(),
-      price: double.parse(_priceController.text.trim()),
-      category: _selectedCategory!,
-      // No logged-in user/profile system yet — see auth_service.dart's
-      // note about where AuthService.currentUser plugs in once that
-      // exists. Hardcoding "You" keeps this page honest about what it
-      // actually knows right now.
-      sellerName: 'You',
-      postedAt: DateTime.now(),
-      imageUrl: _pickedImage?.path ?? '',
-      description: _descriptionController.text.trim(),
-    );
-
-    // Newest listing first, matching how Home's "Recent Listings" title
-    // reads.
-    marketplaceStore.addProduct(newProduct);
+    setState(() => _isLoading = false);
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Listing posted!')),

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../services/app_error.dart';
+import '../../services/auth_service.dart';
+import '../../services/profile_service.dart';
 import '../../theme/app_text_styles.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/custom_button.dart';
@@ -28,6 +31,9 @@ class _SignupPageState extends State<SignupPage> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
+  final _authService = AuthService();
+  final _profileService = ProfileService();
+
   bool _isLoading = false;
 
   @override
@@ -44,10 +50,28 @@ class _SignupPageState extends State<SignupPage> {
 
     setState(() => _isLoading = true);
 
-    // WHERE REAL AUTH GOES:
-    // await authService.signUp(name, email, password);
-    // once services/auth_service.dart and Firebase exist.
-    await Future.delayed(const Duration(milliseconds: 900));
+    try {
+      final name = _nameController.text.trim();
+      final email = _emailController.text.trim();
+      final credential = await _authService.signUp(
+        name: name,
+        email: email,
+        password: _passwordController.text,
+      );
+      final uid = credential.user?.uid;
+      if (uid != null) {
+        // Step 2 & 3 of signup: create the Firestore profile document
+        // and associate it with the new Firebase Auth UID.
+        await _profileService.createProfile(uid: uid, name: name, email: email);
+      }
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(userMessage(error))));
+      return;
+    }
 
     if (!mounted) return;
 
@@ -55,6 +79,44 @@ class _SignupPageState extends State<SignupPage> {
 
     // Same as Login: clear the whole auth stack so Home is the new
     // "root" the back button respects.
+    Navigator.of(context).pushAndRemoveUntil(
+      KrazePageRoute(builder: (_) => const HomePage()),
+      (route) => false,
+    );
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() => _isLoading = true);
+    try {
+      final credential = await _authService.signInWithGoogle();
+      if (credential == null) {
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
+      final user = credential.user;
+      if (user != null) {
+        // Google sign-in may be this student's first time using Kraze —
+        // create their Firestore profile if it doesn't exist yet.
+        final doc = await _profileService.watchProfile(user.uid).first;
+        if (!doc.exists) {
+          await _profileService.createProfile(
+            uid: user.uid,
+            name: user.displayName ?? 'Student',
+            email: user.email ?? '',
+          );
+        }
+      }
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(userMessage(error))));
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
     Navigator.of(context).pushAndRemoveUntil(
       KrazePageRoute(builder: (_) => const HomePage()),
       (route) => false,
@@ -206,7 +268,7 @@ class _SignupPageState extends State<SignupPage> {
 
                     const AuthDivider(label: 'Or sign up with'),
                     const SizedBox(height: 20),
-                    const SocialSignInRow(),
+                    SocialSignInRow(onGooglePressed: _handleGoogleSignIn),
                     const SizedBox(height: 32),
                   ],
                 ),
