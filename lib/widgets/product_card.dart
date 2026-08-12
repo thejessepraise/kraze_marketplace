@@ -73,17 +73,53 @@ class ProductCard extends StatelessWidget {
             // "Take up all the remaining vertical space."
             //
             Expanded(
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(16),
-                ),
-                // ProductImage handles both bundled assets/images/... paths
-                // AND device file paths (from a student's own photo picked
-                // in Post Item) — see widgets/product_image.dart.
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ProductImage(imagePath: product.imageUrl),
-                ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(16),
+                    ),
+                    // ProductImage handles both bundled assets/images/... paths
+                    // AND device file paths (from a student's own photo picked
+                    // in Post Item) — see widgets/product_image.dart.
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ProductImage(imagePath: product.imageUrl),
+                    ),
+                  ),
+                  if (product.status == 'sold')
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.6),
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(16),
+                          ),
+                        ),
+                        child: Center(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.redAccent,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'SOLD',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
             // ==========================================================

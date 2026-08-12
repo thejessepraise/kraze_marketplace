@@ -14,7 +14,8 @@ class Product {
   final DateTime postedAt;
   final bool isFavorite;
   final String description;
-  final String status; 
+  final String status; // 'active' or 'sold'
+  final String condition; // 'New', 'Like New', 'Good', 'Fair'
   final double averageRating;
   final int reviewCount;
 
@@ -32,11 +33,18 @@ class Product {
     this.isFavorite = false,
     this.description = '',
     this.status = 'active',
+    this.condition = 'Good',
     this.averageRating = 0.0,
     this.reviewCount = 0,
   });
 
-  Product copyWith({bool? isFavorite, double? averageRating, int? reviewCount}) {
+  Product copyWith({
+    bool? isFavorite,
+    double? averageRating,
+    int? reviewCount,
+    String? status,
+    String? condition,
+  }) {
     return Product(
       id: id,
       title: title,
@@ -50,7 +58,8 @@ class Product {
       imageUrl: imageUrl,
       isFavorite: isFavorite ?? this.isFavorite,
       description: description,
-      status: status,
+      status: status ?? this.status,
+      condition: condition ?? this.condition,
       averageRating: averageRating ?? this.averageRating,
       reviewCount: reviewCount ?? this.reviewCount,
     );
@@ -75,6 +84,7 @@ class Product {
       isFavorite: favoriteIds.contains(doc.id),
       description: (data['description'] as String?) ?? '',
       status: (data['status'] as String?) ?? 'active',
+      condition: (data['condition'] as String?) ?? 'Good',
       averageRating: (data['averageRating'] as num?)?.toDouble() ?? 0.0,
       reviewCount: (data['reviewCount'] as num?)?.toInt() ?? 0,
     );
@@ -92,6 +102,7 @@ class Product {
       'imageUrl': imageUrl,
       'description': description,
       'status': status,
+      'condition': condition,
       'averageRating': averageRating,
       'reviewCount': reviewCount,
       'createdAt': FieldValue.serverTimestamp(),

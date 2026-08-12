@@ -25,16 +25,24 @@ class _EditItemPageState extends State<EditItemPage> {
   late final TextEditingController _priceController;
   late final TextEditingController _descriptionController;
   String? _selectedCategory;
+  String _selectedCondition = 'Good';
   XFile? _pickedImage;
   bool _isLoading = false;
+
+  final List<String> _conditions = ['New', 'Slightly used', 'Good', 'Fair'];
 
   @override
   void initState() {
     super.initState();
     _titleController = TextEditingController(text: widget.product.title);
-    _priceController = TextEditingController(text: widget.product.price.toString());
-    _descriptionController = TextEditingController(text: widget.product.description);
+    _priceController = TextEditingController(
+      text: widget.product.price.toString(),
+    );
+    _descriptionController = TextEditingController(
+      text: widget.product.description,
+    );
     _selectedCategory = widget.product.category;
+    _selectedCondition = widget.product.condition;
   }
 
   @override
@@ -71,19 +79,20 @@ class _EditItemPageState extends State<EditItemPage> {
         price: double.parse(cleanPrice),
         category: _selectedCategory!,
         description: _descriptionController.text.trim(),
+        condition: _selectedCondition,
         imageFile: _pickedImage,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Listing updated!')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Listing updated!')));
       Navigator.of(context).pop(true);
     } catch (error) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(userMessage(error))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(userMessage(error))));
     }
   }
 
@@ -110,21 +119,28 @@ class _EditItemPageState extends State<EditItemPage> {
                     CustomTextField(
                       hint: 'Item Title',
                       controller: _titleController,
-                      validator: (v) => v?.isEmpty ?? true ? 'Enter a title' : null,
+                      validator: (v) =>
+                          v?.isEmpty ?? true ? 'Enter a title' : null,
                     ),
                     const SizedBox(height: 16),
                     CustomTextField(
                       hint: 'Price (GH₵)',
                       controller: _priceController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       validator: (v) {
                         if (v == null || v.isEmpty) return 'Enter a price';
                         final clean = v.trim().replaceAll(',', '');
-                        return double.tryParse(clean) == null ? 'Enter valid price' : null;
+                        return double.tryParse(clean) == null
+                            ? 'Enter valid price'
+                            : null;
                       },
                     ),
                     const SizedBox(height: 16),
                     _buildCategorySelector(theme, colorScheme),
+                    const SizedBox(height: 16),
+                    _buildConditionSelector(theme, colorScheme),
                     const SizedBox(height: 16),
                     CustomTextField(
                       hint: 'Description',
@@ -168,6 +184,20 @@ class _EditItemPageState extends State<EditItemPage> {
                 child: ProductImage(imagePath: _pickedImage!.path),
               ),
       ),
+    );
+  }
+
+  Widget _buildConditionSelector(ThemeData theme, ColorScheme colorScheme) {
+    return Wrap(
+      spacing: 8,
+      children: _conditions.map((c) {
+        final selected = c == _selectedCondition;
+        return ChoiceChip(
+          label: Text(c),
+          selected: selected,
+          onSelected: (_) => setState(() => _selectedCondition = c),
+        );
+      }).toList(),
     );
   }
 

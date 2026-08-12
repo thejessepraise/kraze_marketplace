@@ -38,10 +38,8 @@ class _PostItemPageState extends State<PostItemPage> {
   final _priceController = TextEditingController();
   final _descriptionController = TextEditingController();
 
-  // Starts unselected on purpose — forcing a student to actively choose a
-  // category (rather than defaulting to the first one) avoids a pile of
-  // miscategorized listings from people who just tap "Post" too quickly.
   String? _selectedCategory;
+  String _selectedCondition = 'Good';
 
   // Holds the path to the photo the student picked, or null if they
   // haven't picked one yet. XFile (from image_picker) wraps a file on
@@ -49,6 +47,8 @@ class _PostItemPageState extends State<PostItemPage> {
   XFile? _pickedImage;
 
   bool _isLoading = false;
+
+  final List<String> _conditions = ['New', 'Like New', 'Good', 'Fair'];
 
   @override
   void dispose() {
@@ -98,6 +98,7 @@ class _PostItemPageState extends State<PostItemPage> {
         price: double.parse(cleanPrice),
         category: _selectedCategory!,
         description: _descriptionController.text.trim(),
+        condition: _selectedCondition,
         imageFile: _pickedImage,
       );
     } catch (error) {
@@ -215,6 +216,16 @@ class _PostItemPageState extends State<PostItemPage> {
                     const SizedBox(height: 20),
 
                     Text(
+                      'Condition',
+                      style: AppTextStyles.fieldLabel.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildConditionSelector(theme, colorScheme),
+                    const SizedBox(height: 20),
+
+                    Text(
                       'Description',
                       style: AppTextStyles.fieldLabel.copyWith(
                         color: colorScheme.onSurfaceVariant,
@@ -308,6 +319,24 @@ class _PostItemPageState extends State<PostItemPage> {
                 ],
               ),
       ),
+    );
+  }
+
+  Widget _buildConditionSelector(ThemeData theme, ColorScheme colorScheme) {
+    return Wrap(
+      spacing: 8,
+      children: _conditions.map((condition) {
+        final selected = _selectedCondition == condition;
+        return ChoiceChip(
+          label: Text(condition),
+          selected: selected,
+          onSelected: (_) => setState(() => _selectedCondition = condition),
+          selectedColor: colorScheme.primary,
+          labelStyle: TextStyle(
+            color: selected ? colorScheme.onPrimary : colorScheme.onSurface,
+          ),
+        );
+      }).toList(),
     );
   }
 

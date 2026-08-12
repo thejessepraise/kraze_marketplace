@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../models/product.dart';
+import '../../models/review.dart';
 import '../../services/app_error.dart';
 import '../../services/marketplace_store.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../widgets/kraze_page_route.dart';
 import '../../widgets/product_image.dart';
-import '../../models/review.dart';
 import '../../widgets/seller_avatar.dart';
 import '../chat/chat_page.dart';
 import '../post_item/edit_item_page.dart';
@@ -28,54 +28,64 @@ class ProductDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    return ListenableBuilder(
+      listenable: marketplaceStore,
+      builder: (context, _) {
+        final currentProduct = marketplaceStore.products.firstWhere(
+          (p) => p.id == product.id,
+          orElse: () => product,
+        );
 
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: theme.scaffoldBackgroundColor,
-        centerTitle: true,
-        title: const Text('Product Details'),
-      ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final isWide = constraints.maxWidth >= _wideScreenBreakpoint;
-          return isWide
-              ? _buildWideLayout(context)
-              : _buildNarrowLayout(context);
-        },
-      ),
+        final theme = Theme.of(context);
+
+        return Scaffold(
+          backgroundColor: theme.scaffoldBackgroundColor,
+          appBar: AppBar(
+            elevation: 0,
+            backgroundColor: theme.scaffoldBackgroundColor,
+            centerTitle: true,
+            title: const Text('Product Details'),
+          ),
+          body: LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth >= _wideScreenBreakpoint;
+              return isWide
+                  ? _buildWideLayout(context, currentProduct)
+                  : _buildNarrowLayout(context, currentProduct);
+            },
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildNarrowLayout(BuildContext context) {
+  Widget _buildNarrowLayout(BuildContext context, Product product) {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildImageSection(context),
+          _buildImageSection(context, product),
           const SizedBox(height: 24),
-          ..._buildDetailsColumn(context),
+          ..._buildDetailsColumn(context, product),
         ],
       ),
     );
   }
 
-  Widget _buildWideLayout(BuildContext context) {
+  Widget _buildWideLayout(BuildContext context, Product product) {
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(child: _buildImageSection(context, height: 480)),
+          Expanded(child: _buildImageSection(context, product, height: 480)),
           const SizedBox(width: 32),
           Expanded(
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: _buildDetailsColumn(context),
+                children: _buildDetailsColumn(context, product),
               ),
             ),
           ),
@@ -84,21 +94,25 @@ class ProductDetailPage extends StatelessWidget {
     );
   }
 
-  List<Widget> _buildDetailsColumn(BuildContext context) {
+  List<Widget> _buildDetailsColumn(BuildContext context, Product product) {
     return [
-      _buildProductInfo(context),
+      _buildProductInfo(context, product),
       const SizedBox(height: 20),
-      _buildSellerCard(context),
+      _buildSellerCard(context, product),
       const SizedBox(height: 20),
-      _buildDescriptionSection(context),
+      _buildDescriptionSection(context, product),
       const SizedBox(height: 20),
-      _buildReviewsSection(context),
+      _buildReviewsSection(context, product),
       const SizedBox(height: 28),
-      _buildActions(context),
+      _buildActions(context, product),
     ];
   }
 
-  Widget _buildImageSection(BuildContext context, {double height = 340}) {
+  Widget _buildImageSection(
+    BuildContext context,
+    Product product, {
+    double height = 340,
+  }) {
     final theme = Theme.of(context);
 
     return Container(
@@ -117,7 +131,7 @@ class ProductDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildProductInfo(BuildContext context) {
+  Widget _buildProductInfo(BuildContext context, Product product) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -136,13 +150,48 @@ class ProductDetailPage extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              product.category,
+              product.category.toUpperCase(),
               style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
                 color: colorScheme.primary,
+                letterSpacing: 0.5,
               ),
             ),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: colorScheme.secondaryContainer,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                product.condition,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSecondaryContainer,
+                ),
+              ),
+            ),
+            if (product.status == 'sold') ...[
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.redAccent,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'SOLD',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
         const SizedBox(height: 12),
@@ -171,11 +220,15 @@ class ProductDetailPage extends StatelessWidget {
               const SizedBox(width: 4),
               Text(
                 product.averageRating.toStringAsFixed(1),
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               Text(
                 ' (${product.reviewCount})',
-                style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 14),
+                style: TextStyle(
+                  color: colorScheme.onSurfaceVariant,
+                  fontSize: 14,
+                ),
               ),
             ],
           ],
@@ -186,159 +239,7 @@ class ProductDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildReviewsSection(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Reviews',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSurface,
-              ),
-            ),
-            TextButton(
-              onPressed: () => _showAddReviewDialog(context),
-              child: const Text('Add Review'),
-            ),
-          ],
-        ),
-        StreamBuilder<List<Review>>(
-          stream: marketplaceStore.watchReviews(product.id),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) return const SizedBox.shrink();
-            final reviews = snapshot.data!;
-            if (reviews.isEmpty) {
-              return Text(
-                'No reviews yet. Be the first to review!',
-                style: TextStyle(fontSize: 13, color: colorScheme.onSurfaceVariant),
-              );
-            }
-            return ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: reviews.length > 3 ? 3 : reviews.length,
-              itemBuilder: (context, index) {
-                final review = reviews[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          SellerAvatar(
-                            name: review.userName,
-                            uid: review.userId,
-                            radius: 14,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              review.userName,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          ...List.generate(5, (i) {
-                            return Icon(
-                              Icons.star,
-                              size: 12,
-                              color: i < review.rating ? Colors.amber : theme.dividerColor,
-                            );
-                          }),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        review.comment,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  void _showAddReviewDialog(BuildContext context) {
-    double selectedRating = 5;
-    final commentController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Add Review'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(5, (index) {
-                  return IconButton(
-                    icon: Icon(
-                      index < selectedRating ? Icons.star : Icons.star_border,
-                      color: Colors.amber,
-                    ),
-                    onPressed: () => setState(() => selectedRating = index + 1.0),
-                  );
-                }),
-              ),
-              TextField(
-                controller: commentController,
-                decoration: const InputDecoration(hintText: 'Share your experience...'),
-                maxLines: 3,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                try {
-                  await marketplaceStore.addReview(
-                    productId: product.id,
-                    rating: selectedRating,
-                    comment: commentController.text.trim(),
-                  );
-                  if (context.mounted) Navigator.pop(context);
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(userMessage(e))),
-                    );
-                  }
-                }
-              },
-              child: const Text('Post'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSellerCard(BuildContext context) {
+  Widget _buildSellerCard(BuildContext context, Product product) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -431,7 +332,7 @@ class ProductDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildDescriptionSection(BuildContext context) {
+  Widget _buildDescriptionSection(BuildContext context, Product product) {
     final colorScheme = Theme.of(context).colorScheme;
     final hasDescription = product.description.trim().isNotEmpty;
 
@@ -474,55 +375,216 @@ class ProductDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildActions(BuildContext context) {
+  Widget _buildReviewsSection(BuildContext context, Product product) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Reviews',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface,
+              ),
+            ),
+            TextButton(
+              onPressed: () => _showAddReviewDialog(context, product),
+              child: const Text('Add Review'),
+            ),
+          ],
+        ),
+        StreamBuilder<List<Review>>(
+          stream: marketplaceStore.watchReviews(product.id),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const SizedBox.shrink();
+            final reviews = snapshot.data!;
+            if (reviews.isEmpty) {
+              return Text(
+                'No reviews yet. Be the first to review!',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              );
+            }
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: reviews.length > 3 ? 3 : reviews.length,
+              itemBuilder: (context, index) {
+                final review = reviews[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          SellerAvatar(
+                            name: review.userName,
+                            uid: review.userId,
+                            radius: 14,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              review.userName,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          ...List.generate(5, (i) {
+                            return Icon(
+                              Icons.star,
+                              size: 12,
+                              color: i < review.rating
+                                  ? Colors.amber
+                                  : theme.dividerColor,
+                            );
+                          }),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        review.comment,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActions(BuildContext context, Product product) {
     final colorScheme = Theme.of(context).colorScheme;
     final currentUser = FirebaseAuth.instance.currentUser;
     final isSeller = currentUser?.uid == product.sellerId;
 
     if (isSeller) {
-      return Row(
+      return Column(
         children: [
-          Expanded(
-            child: SizedBox(
-              height: 52,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colorScheme.secondaryContainer,
-                  foregroundColor: colorScheme.onSecondaryContainer,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 52,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colorScheme.secondaryContainer,
+                      foregroundColor: colorScheme.onSecondaryContainer,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    onPressed: () async {
+                      final updated = await Navigator.of(context).push<bool>(
+                        KrazePageRoute(
+                          builder: (_) => EditItemPage(product: product),
+                        ),
+                      );
+                      if (updated == true && context.mounted) {
+                        Navigator.of(context).pop();
+                      }
+                    },
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Edit Listing'),
                   ),
                 ),
-                onPressed: () async {
-                  final updated = await Navigator.of(context).push<bool>(
-                    KrazePageRoute(builder: (_) => EditItemPage(product: product)),
-                  );
-                  if (updated == true && context.mounted) {
-                    Navigator.of(context).pop();
-                  }
-                },
-                icon: const Icon(Icons.edit_outlined),
-                label: const Text('Edit Listing'),
               ),
-            ),
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 52,
+                height: 52,
+                child: IconButton(
+                  onPressed: () => _confirmDelete(context, product),
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.redAccent.withValues(alpha: 0.1),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  icon:
+                      const Icon(Icons.delete_outline, color: Colors.redAccent),
+                  tooltip: 'Delete Listing',
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
+          const SizedBox(height: 12),
           SizedBox(
-            width: 52,
+            width: double.infinity,
             height: 52,
-            child: IconButton(
-              onPressed: () => _confirmDelete(context),
-              style: IconButton.styleFrom(
-                backgroundColor: Colors.redAccent.withValues(alpha: 0.1),
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(
+                  color: product.status == 'sold'
+                      ? colorScheme.primary
+                      : Colors.redAccent,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
+                foregroundColor: product.status == 'sold'
+                    ? colorScheme.primary
+                    : Colors.redAccent,
               ),
-              icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-              tooltip: 'Delete Listing',
+              onPressed: () => marketplaceStore.toggleSoldStatus(
+                product.id,
+                product.status,
+              ),
+              icon: Icon(
+                product.status == 'sold'
+                    ? Icons.replay_outlined
+                    : Icons.check_circle_outline,
+              ),
+              label: Text(
+                product.status == 'sold' ? 'Mark as Active' : 'Mark as Sold',
+              ),
             ),
           ),
         ],
+      );
+    }
+
+    if (product.status == 'sold') {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.redAccent.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.info_outline, color: Colors.redAccent),
+            const SizedBox(width: 10),
+            Text(
+              'This item has been sold.',
+              style: TextStyle(
+                color: Colors.redAccent,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       );
     }
 
@@ -591,14 +653,17 @@ class ProductDetailPage extends StatelessWidget {
     );
   }
 
-  Future<void> _confirmDelete(BuildContext context) async {
+  Future<void> _confirmDelete(BuildContext context, Product product) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Listing?'),
         content: const Text('This action cannot be undone.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
@@ -620,5 +685,69 @@ class ProductDetailPage extends StatelessWidget {
         }
       }
     }
+  }
+
+  void _showAddReviewDialog(BuildContext context, Product product) {
+    double selectedRating = 5;
+    final commentController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Add Review'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (index) {
+                  return IconButton(
+                    icon: Icon(
+                      index < selectedRating ? Icons.star : Icons.star_border,
+                      color: Colors.amber,
+                    ),
+                    onPressed:
+                        () => setState(() => selectedRating = index + 1.0),
+                  );
+                }),
+              ),
+              TextField(
+                controller: commentController,
+                decoration: const InputDecoration(
+                  hintText: 'Share your experience...',
+                ),
+                maxLines: 3,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                try {
+                  await marketplaceStore.addReview(
+                    productId: product.id,
+                    rating: selectedRating,
+                    comment: commentController.text.trim(),
+                  );
+                  if (context.mounted) Navigator.pop(context);
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(userMessage(e))),
+                    );
+                  }
+                }
+              },
+              child: const Text('Post'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

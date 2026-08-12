@@ -95,11 +95,14 @@ class _MarketplaceTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final products = selectedCategory == 'All'
+    final allProducts = selectedCategory == 'All'
         ? marketplaceStore.products
         : marketplaceStore.products
               .where((product) => product.category == selectedCategory)
               .toList(growable: false);
+    
+    // Only show active items in the main feed
+    final products = allProducts.where((p) => p.status == 'active').toList();
 
     return CustomScrollView(
       slivers: [

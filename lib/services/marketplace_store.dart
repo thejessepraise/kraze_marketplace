@@ -103,7 +103,6 @@ class MarketplaceStore extends ChangeNotifier {
           try {
             final list = snapshot.docs
                 .map((doc) => Product.fromDoc(doc))
-                .where((p) => p.status == 'active')
                 .toList();
             
             list.sort((a, b) => b.postedAt.compareTo(a.postedAt));
@@ -235,6 +234,7 @@ class MarketplaceStore extends ChangeNotifier {
     required double price,
     required String category,
     required String description,
+    required String condition,
     XFile? imageFile,
   }) async {
     final user = FirebaseAuth.instance.currentUser;
@@ -265,6 +265,7 @@ class MarketplaceStore extends ChangeNotifier {
       postedAt: DateTime.now(),
       imageUrl: imageUrl,
       description: description,
+      condition: condition,
     );
 
     await docRef.set(product.toMap());
@@ -276,6 +277,7 @@ class MarketplaceStore extends ChangeNotifier {
     required double price,
     required String category,
     required String description,
+    String? condition,
     XFile? imageFile,
   }) async {
     final user = FirebaseAuth.instance.currentUser;
@@ -289,6 +291,8 @@ class MarketplaceStore extends ChangeNotifier {
       'updatedAt': FieldValue.serverTimestamp(),
     };
 
+    if (condition != null) update['condition'] = condition;
+
     if (imageFile != null) {
       final bytes = await imageFile.readAsBytes();
       final base64String = base64Encode(bytes);
@@ -296,6 +300,17 @@ class MarketplaceStore extends ChangeNotifier {
     }
 
     await _firestore.collection('products').doc(productId).update(update);
+  }
+
+  Future<void> toggleSoldStatus(String productId, String currentStatus) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    
+    final newStatus = currentStatus == 'active' ? 'sold' : 'active';
+    await _firestore.collection('products').doc(productId).update({
+      'status': newStatus,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 
   Future<void> deleteListing(String productId) async {

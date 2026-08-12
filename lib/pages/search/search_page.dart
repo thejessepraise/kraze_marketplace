@@ -40,6 +40,7 @@ class _SearchPageState extends State<SearchPage> {
     if (query.isEmpty) return [];
 
     return marketplaceStore.products.where((product) {
+      if (product.status != 'active') return false;
       final title = product.title.toLowerCase();
       final category = product.category.toLowerCase();
       return title.contains(query) || category.contains(query);
