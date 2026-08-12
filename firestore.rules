@@ -17,11 +17,21 @@ service cloud.firestore {
 
     // PRODUCTS:
     // Publicly readable.
-    // Only the seller can create, update, or delete.
+    // Seller can update everything. Others can only update rating stats via reviews.
     match /products/{productId} {
       allow read: if true;
       allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && (resource.data.sellerId == request.auth.uid || request.resource.data.sellerId == request.auth.uid);
+      allow update: if request.auth != null && (
+        resource.data.sellerId == request.auth.uid ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['averageRating', 'reviewCount', 'updatedAt'])
+      );
+      allow delete: if request.auth != null && resource.data.sellerId == request.auth.uid;
+
+      match /reviews/{reviewId} {
+        allow read: if true;
+        allow create: if request.auth != null;
+        allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      }
     }
 
     // CONVERSATIONS & MESSAGES:

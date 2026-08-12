@@ -9,6 +9,7 @@ class UserProfile {
   final String name;
   final String email;
   final String phone;
+  final String location;
   final String photoUrl; // empty string if none uploaded yet
   final DateTime? createdAt;
 
@@ -17,6 +18,7 @@ class UserProfile {
     required this.name,
     required this.email,
     this.phone = '',
+    this.location = '',
     this.photoUrl = '',
     this.createdAt,
   });
@@ -28,6 +30,7 @@ class UserProfile {
       name: (data['name'] as String?) ?? '',
       email: (data['email'] as String?) ?? '',
       phone: (data['phone'] as String?) ?? '',
+      location: (data['location'] as String?) ?? '',
       photoUrl: (data['photoUrl'] as String?) ?? '',
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
     );
@@ -38,16 +41,23 @@ class UserProfile {
       'name': name,
       'email': email,
       'phone': phone,
+      'location': location,
       'photoUrl': photoUrl,
     };
   }
 
-  UserProfile copyWith({String? name, String? phone, String? photoUrl}) {
+  UserProfile copyWith({
+    String? name,
+    String? phone,
+    String? location,
+    String? photoUrl,
+  }) {
     return UserProfile(
       uid: uid,
       name: name ?? this.name,
       email: email,
       phone: phone ?? this.phone,
+      location: location ?? this.location,
       photoUrl: photoUrl ?? this.photoUrl,
       createdAt: createdAt,
     );

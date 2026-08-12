@@ -14,6 +14,7 @@ class Conversation {
   Conversation({
     required this.id,
     required this.sellerName,
+    this.otherParticipantId = '',
     this.sellerPhone = '',
     required this.productTitle,
     required this.productImageUrl,
@@ -23,6 +24,7 @@ class Conversation {
 
   final String id;
   final String sellerName;
+  final String otherParticipantId;
   final String sellerPhone;
   final String productTitle;
   final String productImageUrl;

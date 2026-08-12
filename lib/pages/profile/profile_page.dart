@@ -213,6 +213,9 @@ class ProfilePage extends StatelessWidget {
     final phoneController = TextEditingController(
       text: profile?.phone ?? '',
     );
+    final locationController = TextEditingController(
+      text: profile?.location ?? '',
+    );
 
     return showModalBottomSheet(
       context: context,
@@ -247,6 +250,12 @@ class ProfilePage extends StatelessWidget {
                 keyboardType: TextInputType.phone,
                 prefixIcon: Icons.phone_outlined,
               ),
+              const SizedBox(height: 14),
+              CustomTextField(
+                hint: 'Location (e.g. Legon Campus, Block B)',
+                controller: locationController,
+                prefixIcon: Icons.location_on_outlined,
+              ),
               const SizedBox(height: 20),
               CustomButton(
                 label: 'Save',
@@ -255,6 +264,7 @@ class ProfilePage extends StatelessWidget {
                     await marketplaceStore.updateProfile(
                       name: nameController.text.trim(),
                       phone: phoneController.text.trim(),
+                      location: locationController.text.trim(),
                     );
                   } catch (error) {
                     if (!sheetContext.mounted) return;

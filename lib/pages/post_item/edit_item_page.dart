@@ -64,10 +64,11 @@ class _EditItemPageState extends State<EditItemPage> {
     setState(() => _isLoading = true);
 
     try {
+      final cleanPrice = _priceController.text.trim().replaceAll(',', '');
       await marketplaceStore.updateListing(
         productId: widget.product.id,
         title: _titleController.text.trim(),
-        price: double.parse(_priceController.text.trim()),
+        price: double.parse(cleanPrice),
         category: _selectedCategory!,
         description: _descriptionController.text.trim(),
         imageFile: _pickedImage,
@@ -115,8 +116,12 @@ class _EditItemPageState extends State<EditItemPage> {
                     CustomTextField(
                       hint: 'Price (GH₵)',
                       controller: _priceController,
-                      keyboardType: TextInputType.number,
-                      validator: (v) => double.tryParse(v ?? '') == null ? 'Enter valid price' : null,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Enter a price';
+                        final clean = v.trim().replaceAll(',', '');
+                        return double.tryParse(clean) == null ? 'Enter valid price' : null;
+                      },
                     ),
                     const SizedBox(height: 16),
                     _buildCategorySelector(theme, colorScheme),
@@ -125,6 +130,7 @@ class _EditItemPageState extends State<EditItemPage> {
                       hint: 'Description',
                       controller: _descriptionController,
                       maxLines: 4,
+                      keyboardType: TextInputType.multiline,
                     ),
                     const SizedBox(height: 24),
                     CustomButton(

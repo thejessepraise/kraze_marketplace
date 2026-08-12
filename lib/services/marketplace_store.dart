@@ -11,6 +11,8 @@ import 'package:kraze_student_marketplace/models/product.dart';
 import 'package:kraze_student_marketplace/models/user_profile.dart';
 import 'package:kraze_student_marketplace/services/profile_service.dart';
 
+import 'package:kraze_student_marketplace/models/review.dart';
+
 /// Central app state, now backed by Firestore instead of an in-memory
 /// list.
 class MarketplaceStore extends ChangeNotifier {
@@ -47,8 +49,32 @@ class MarketplaceStore extends ChangeNotifier {
       .map((p) => p.copyWith(isFavorite: _favoriteIds.contains(p.id)))
       .toList(growable: false);
 
-  List<Conversation> get conversations =>
-      List<Conversation>.unmodifiable(_conversations);
+  List<Conversation> get conversations {
+    // Group conversations by the other participant so the list doesn't
+    // show duplicates if multiple legacy threads exist between same people.
+    final Map<String, Conversation> grouped = {};
+    for (final conv in _conversations) {
+      final otherId = conv.otherParticipantId;
+      final existing = grouped[otherId];
+      if (existing == null) {
+        grouped[otherId] = conv;
+      } else {
+        // Keep the one with the more recent activity
+        final existingTime = existing.lastMessage?.sentAt ?? DateTime(0);
+        final convTime = conv.lastMessage?.sentAt ?? DateTime(0);
+        if (convTime.isAfter(existingTime)) {
+          grouped[otherId] = conv;
+        }
+      }
+    }
+    final list = grouped.values.toList();
+    list.sort((a, b) {
+      final aTime = a.lastMessage?.sentAt ?? DateTime(0);
+      final bTime = b.lastMessage?.sentAt ?? DateTime(0);
+      return bTime.compareTo(aTime);
+    });
+    return list;
+  }
 
   /// Returns the number of conversations with new messages since the user
   /// last viewed them.
@@ -56,7 +82,18 @@ class MarketplaceStore extends ChangeNotifier {
     return _conversations.where((c) => c.isUnread).length;
   }
 
+  List<Product> getProductsBySeller(String sellerId) => _products
+      .where((product) => product.sellerId == sellerId)
+      .map((p) => p.copyWith(isFavorite: _favoriteIds.contains(p.id)))
+      .toList(growable: false);
+
   UserProfile? get currentProfile => _profile;
+
+  Future<UserProfile?> getUserProfile(String uid) async {
+    final doc = await _firestore.collection('users').doc(uid).get();
+    if (!doc.exists) return null;
+    return UserProfile.fromDoc(doc);
+  }
 
   void _onAuthChanged(User? user) {
     _productsSub ??= _firestore
@@ -153,6 +190,7 @@ class MarketplaceStore extends ChangeNotifier {
   ) {
     final data = doc.data() ?? const {};
     final isSeller = data['sellerId'] == uid;
+    final otherId = (isSeller ? data['buyerId'] : data['sellerId']) as String? ?? '';
     final otherName = (isSeller ? data['buyerName'] : data['sellerName'])
             as String? ??
         'Student';
@@ -175,6 +213,7 @@ class MarketplaceStore extends ChangeNotifier {
     return Conversation(
       id: doc.id,
       sellerName: otherName,
+      otherParticipantId: otherId,
       sellerPhone: otherPhone,
       productTitle: (data['productTitle'] as String?) ?? '',
       productImageUrl: (data['productImageUrl'] as String?) ?? '',
@@ -222,6 +261,7 @@ class MarketplaceStore extends ChangeNotifier {
       sellerName: _profile?.name ?? user.displayName ?? 'Student Seller',
       sellerId: user.uid,
       sellerPhone: _profile?.phone ?? '',
+      sellerLocation: _profile?.location ?? '',
       postedAt: DateTime.now(),
       imageUrl: imageUrl,
       description: description,
@@ -295,12 +335,38 @@ class MarketplaceStore extends ChangeNotifier {
       throw StateError('You must be signed in to message a seller.');
     }
 
-    final conversationId = '${product.id}_${user.uid}';
-    final docRef = _firestore.collection('conversations').doc(conversationId);
-    final existing = await docRef.get();
+    // 1. Look for ANY existing conversation between these two people.
+    // This finds chats created with both the old ID format and the new one.
+    final existingQuery = await _firestore
+        .collection('conversations')
+        .where('participantIds', arrayContains: user.uid)
+        .get();
 
-    if (!existing.exists) {
-      await docRef.set({
+    DocumentSnapshot<Map<String, dynamic>>? existingDoc;
+    for (final doc in existingQuery.docs) {
+      final ids = List<String>.from(doc.data()['participantIds'] ?? []);
+      if (ids.contains(product.sellerId)) {
+        existingDoc = doc;
+        break;
+      }
+    }
+
+    final String conversationId;
+    if (existingDoc != null) {
+      conversationId = existingDoc.id;
+      // Update the "context" to the latest product being discussed.
+      await _firestore.collection('conversations').doc(conversationId).update({
+        'productId': product.id,
+        'productTitle': product.title,
+        'productImageUrl': product.imageUrl,
+      });
+      await markAsRead(conversationId);
+    } else {
+      // 2. No existing chat? Create a new one with a stable ID.
+      final participantIds = [product.sellerId, user.uid]..sort();
+      conversationId = participantIds.join('_');
+      
+      await _firestore.collection('conversations').doc(conversationId).set({
         'productId': product.id,
         'productTitle': product.title,
         'productImageUrl': product.imageUrl,
@@ -310,7 +376,7 @@ class MarketplaceStore extends ChangeNotifier {
         'buyerId': user.uid,
         'buyerName': _profile?.name ?? user.displayName ?? 'Student',
         'buyerPhone': _profile?.phone ?? '',
-        'participantIds': [product.sellerId, user.uid],
+        'participantIds': participantIds,
         'lastMessageText': '',
         'lastMessageSenderId': '',
         'lastMessageAt': FieldValue.serverTimestamp(),
@@ -318,11 +384,9 @@ class MarketplaceStore extends ChangeNotifier {
         'buyerLastReadAt': FieldValue.serverTimestamp(),
         'sellerLastReadAt': null,
       });
-    } else {
-      await markAsRead(conversationId);
     }
 
-    final doc = await docRef.get();
+    final doc = await _firestore.collection('conversations').doc(conversationId).get();
     return _conversationFromDoc(doc, user.uid);
   }
 
@@ -373,6 +437,21 @@ class MarketplaceStore extends ChangeNotifier {
     await batch.commit();
   }
 
+  Future<void> deleteConversation(String conversationId) async {
+    final convRef = _firestore.collection('conversations').doc(conversationId);
+    
+    // Delete all messages in the subcollection first
+    final messages = await convRef.collection('messages').get();
+    final batch = _firestore.batch();
+    for (final doc in messages.docs) {
+      batch.delete(doc.reference);
+    }
+    
+    // Delete the conversation document
+    batch.delete(convRef);
+    await batch.commit();
+  }
+
   Stream<List<ChatMessage>> watchMessages(String conversationId) {
     final uid = _uid;
     return _firestore
@@ -395,10 +474,65 @@ class MarketplaceStore extends ChangeNotifier {
         });
   }
 
-  Future<void> updateProfile({String? name, String? phone}) async {
+  Future<void> addReview({
+    required String productId,
+    required double rating,
+    required String comment,
+  }) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw StateError('Must be signed in to review.');
+
+    final productRef = _firestore.collection('products').doc(productId);
+    final reviewsCol = productRef.collection('reviews');
+
+    await _firestore.runTransaction((transaction) async {
+      final productDoc = await transaction.get(productRef);
+      if (!productDoc.exists) return;
+
+      final data = productDoc.data()!;
+      final currentAvg = (data['averageRating'] as num?)?.toDouble() ?? 0.0;
+      final currentCount = (data['reviewCount'] as num?)?.toInt() ?? 0;
+
+      final newCount = currentCount + 1;
+      final newAvg = ((currentAvg * currentCount) + rating) / newCount;
+
+      final reviewDoc = reviewsCol.doc();
+      transaction.set(reviewDoc, {
+        'userId': user.uid,
+        'userName': _profile?.name ?? user.displayName ?? 'Student',
+        'userPhotoUrl': _profile?.photoUrl ?? '',
+        'rating': rating,
+        'comment': comment,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      transaction.update(productRef, {
+        'averageRating': newAvg,
+        'reviewCount': newCount,
+      });
+    });
+  }
+
+  Stream<List<Review>> watchReviews(String productId) {
+    return _firestore
+        .collection('products')
+        .doc(productId)
+        .collection('reviews')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => Review.fromDoc(doc)).toList());
+  }
+
+  Future<void> updateProfile({String? name, String? phone, String? location}) async {
     final uid = _uid;
     if (uid == null) return;
-    await _profileService.updateProfile(uid: uid, name: name, phone: phone);
+    await _profileService.updateProfile(
+      uid: uid,
+      name: name,
+      phone: phone,
+      location: location,
+    );
   }
 
   Future<void> uploadAvatar(XFile image) async {

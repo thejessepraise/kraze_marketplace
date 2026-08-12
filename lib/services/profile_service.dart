@@ -24,6 +24,7 @@ class ProfileService {
       'name': name,
       'email': email,
       'phone': '',
+      'location': '',
       'photoUrl': '',
       'createdAt': FieldValue.serverTimestamp(),
     });
@@ -37,10 +38,12 @@ class ProfileService {
     required String uid,
     String? name,
     String? phone,
+    String? location,
   }) {
     final update = <String, dynamic>{};
     if (name != null) update['name'] = name;
     if (phone != null) update['phone'] = phone;
+    if (location != null) update['location'] = location;
     if (update.isEmpty) return Future.value();
     return _users.doc(uid).update(update);
   }

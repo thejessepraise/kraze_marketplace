@@ -6,6 +6,9 @@ import 'package:kraze_student_marketplace/services/app_error.dart';
 import 'package:kraze_student_marketplace/services/marketplace_store.dart';
 import 'package:kraze_student_marketplace/widgets/seller_avatar.dart';
 
+import '../profile/seller_profile_page.dart';
+import '../../widgets/kraze_page_route.dart';
+
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key, required this.conversation});
 
@@ -77,6 +80,32 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
+  Future<void> _confirmDeleteConversation(BuildContext context, String id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Conversation?'),
+        content: const Text('This will permanently remove all messages.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await marketplaceStore.deleteConversation(id);
+      if (mounted) Navigator.pop(context);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -95,41 +124,63 @@ class _ChatPageState extends State<ChatPage> {
             titleSpacing: 0,
             elevation: 0,
             shape: Border(bottom: BorderSide(color: theme.dividerColor)),
-            title: Row(
-              children: [
-                SellerAvatar(name: conversation.sellerName, radius: 18),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        conversation.sellerName,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      Text(
-                        conversation.productTitle,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
+            title: InkWell(
+              onTap: () {
+                if (conversation.otherParticipantId.isEmpty) return;
+                Navigator.of(context).push(
+                  KrazePageRoute(
+                    builder: (_) => SellerProfilePage(
+                      sellerId: conversation.otherParticipantId,
+                      sellerName: conversation.sellerName,
+                    ),
                   ),
-                ),
-              ],
+                );
+              },
+              child: Row(
+                children: [
+                  SellerAvatar(
+                    name: conversation.sellerName,
+                    uid: conversation.otherParticipantId,
+                    radius: 18,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          conversation.sellerName,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          conversation.productTitle,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
             actions: [
               IconButton(
                 icon: const Icon(Icons.call_outlined),
                 tooltip: 'Call seller',
                 onPressed: () => _callSeller(conversation),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline),
+                tooltip: 'Delete conversation',
+                onPressed: () => _confirmDeleteConversation(context, conversation.id),
               ),
             ],
           ),

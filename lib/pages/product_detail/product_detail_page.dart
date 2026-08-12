@@ -7,8 +7,11 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../widgets/kraze_page_route.dart';
 import '../../widgets/product_image.dart';
+import '../../models/review.dart';
+import '../../widgets/seller_avatar.dart';
 import '../chat/chat_page.dart';
 import '../post_item/edit_item_page.dart';
+import '../profile/seller_profile_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 const double _wideScreenBreakpoint = 700;
@@ -88,6 +91,8 @@ class ProductDetailPage extends StatelessWidget {
       _buildSellerCard(context),
       const SizedBox(height: 20),
       _buildDescriptionSection(context),
+      const SizedBox(height: 20),
+      _buildReviewsSection(context),
       const SizedBox(height: 28),
       _buildActions(context),
     ];
@@ -150,13 +155,30 @@ class ProductDetailPage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        Text(
-          'GH₵${product.price.toStringAsFixed(2)}',
-          style: const TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.bold,
-            color: AppColors.accentPrice,
-          ),
+        Row(
+          children: [
+            Text(
+              'GH₵${product.price.toStringAsFixed(2)}',
+              style: const TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: AppColors.accentPrice,
+              ),
+            ),
+            const Spacer(),
+            if (product.reviewCount > 0) ...[
+              const Icon(Icons.star, color: Colors.amber, size: 20),
+              const SizedBox(width: 4),
+              Text(
+                product.averageRating.toStringAsFixed(1),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              Text(
+                ' (${product.reviewCount})',
+                style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 14),
+              ),
+            ],
+          ],
         ),
         const SizedBox(height: 16),
         Divider(color: theme.dividerColor),
@@ -164,57 +186,247 @@ class ProductDetailPage extends StatelessWidget {
     );
   }
 
+  Widget _buildReviewsSection(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Reviews',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface,
+              ),
+            ),
+            TextButton(
+              onPressed: () => _showAddReviewDialog(context),
+              child: const Text('Add Review'),
+            ),
+          ],
+        ),
+        StreamBuilder<List<Review>>(
+          stream: marketplaceStore.watchReviews(product.id),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const SizedBox.shrink();
+            final reviews = snapshot.data!;
+            if (reviews.isEmpty) {
+              return Text(
+                'No reviews yet. Be the first to review!',
+                style: TextStyle(fontSize: 13, color: colorScheme.onSurfaceVariant),
+              );
+            }
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: reviews.length > 3 ? 3 : reviews.length,
+              itemBuilder: (context, index) {
+                final review = reviews[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          SellerAvatar(
+                            name: review.userName,
+                            uid: review.userId,
+                            radius: 14,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              review.userName,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          ...List.generate(5, (i) {
+                            return Icon(
+                              Icons.star,
+                              size: 12,
+                              color: i < review.rating ? Colors.amber : theme.dividerColor,
+                            );
+                          }),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        review.comment,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  void _showAddReviewDialog(BuildContext context) {
+    double selectedRating = 5;
+    final commentController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Add Review'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (index) {
+                  return IconButton(
+                    icon: Icon(
+                      index < selectedRating ? Icons.star : Icons.star_border,
+                      color: Colors.amber,
+                    ),
+                    onPressed: () => setState(() => selectedRating = index + 1.0),
+                  );
+                }),
+              ),
+              TextField(
+                controller: commentController,
+                decoration: const InputDecoration(hintText: 'Share your experience...'),
+                maxLines: 3,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                try {
+                  await marketplaceStore.addReview(
+                    productId: product.id,
+                    rating: selectedRating,
+                    comment: commentController.text.trim(),
+                  );
+                  if (context.mounted) Navigator.pop(context);
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(userMessage(e))),
+                    );
+                  }
+                }
+              },
+              child: const Text('Post'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildSellerCard(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.dividerColor),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 24,
-            backgroundColor: colorScheme.primaryContainer,
-            child: Icon(Icons.person, color: colorScheme.onPrimaryContainer),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Seller',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  product.sellerName,
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Student Seller',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
+    return InkWell(
+      onTap: () {
+        Navigator.of(context).push(
+          KrazePageRoute(
+            builder: (_) => SellerProfilePage(
+              sellerId: product.sellerId,
+              sellerName: product.sellerName,
             ),
           ),
-        ],
+        );
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: theme.dividerColor),
+        ),
+        child: Row(
+          children: [
+            SellerAvatar(
+              name: product.sellerName,
+              uid: product.sellerId,
+              radius: 24,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Seller',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    product.sellerName,
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                  if (product.sellerLocation.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: 12,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              product.sellerLocation,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  Text(
+                    'Student Seller',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant),
+          ],
+        ),
       ),
     );
   }

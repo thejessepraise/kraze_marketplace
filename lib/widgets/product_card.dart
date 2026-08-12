@@ -111,16 +111,34 @@ class ProductCard extends StatelessWidget {
 
                   const SizedBox(height: 6),
 
-                  // ---------------- Price ----------------
-                  Text(
-                    'GH₵${product.price.toStringAsFixed(2)}',
-
-                    // Accent green makes the price stand out.
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.accentPrice,
-                    ),
+                  // ---------------- Price & Rating ----------------
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'GH₵${product.price.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.accentPrice,
+                        ),
+                      ),
+                      if (product.reviewCount > 0)
+                        Row(
+                          children: [
+                            const Icon(Icons.star, color: Colors.amber, size: 14),
+                            const SizedBox(width: 2),
+                            Text(
+                              product.averageRating.toStringAsFixed(1),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurface,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
                   ),
 
                   const SizedBox(height: 8),

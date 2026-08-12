@@ -92,9 +92,10 @@ class _PostItemPageState extends State<PostItemPage> {
     setState(() => _isLoading = true);
 
     try {
+      final cleanPrice = _priceController.text.trim().replaceAll(',', '');
       await marketplaceStore.createListing(
         title: _titleController.text.trim(),
-        price: double.parse(_priceController.text.trim()),
+        price: double.parse(cleanPrice),
         category: _selectedCategory!,
         description: _descriptionController.text.trim(),
         imageFile: _pickedImage,
@@ -183,13 +184,15 @@ class _PostItemPageState extends State<PostItemPage> {
                       controller: _priceController,
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
+                        signed: false,
                       ),
                       prefixText: '₵ ',
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
                           return 'Enter a price';
                         }
-                        final parsed = double.tryParse(value.trim());
+                        final cleanValue = value.trim().replaceAll(',', '');
+                        final parsed = double.tryParse(cleanValue);
                         if (parsed == null) {
                           return 'Enter a valid number';
                         }
@@ -223,6 +226,7 @@ class _PostItemPageState extends State<PostItemPage> {
                           'Condition, why you\'re selling, pickup details...',
                       controller: _descriptionController,
                       maxLines: 4,
+                      keyboardType: TextInputType.multiline,
                       borderRadius: 16, // less "pill"-like at this height
                       // Optional on purpose — see Product's description
                       // field comment in models/product.dart. No

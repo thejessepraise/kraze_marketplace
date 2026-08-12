@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 /// hunting through every screen.
 class AppColors {
   static const primary = Color.fromARGB(255, 178, 93, 195); // lightened for contrast on dark
-  static const accentPrice = Color.fromARGB(255, 224, 42, 218); // used for prices
+  static const accentPrice = Color.fromARGB(255, 235, 110, 230); // softened for better readability
 
   // Note: dark backgrounds should NOT be pure black (#000000) — a very
   // dark grey is easier on the eyes and is Google's own Material Design
