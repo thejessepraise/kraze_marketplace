@@ -12,7 +12,20 @@
           "package_name": "com.example.kraze_student_marketplace"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "26321643703-dgntftijigq3nkmit6q051tkb0gm56s7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.kraze_student_marketplace",
+            "certificate_hash": "963646e8845f3fdb8c41a84d8b40cbd9768098e9"
+          }
+        },
+        {
+          "client_id": "26321643703-29svsnscojo0vd67vl27nqrrmv73gnsm.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCUuydWyhKr14Pn1-mU1XSgSbW3ZD5E6P0"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "26321643703-29svsnscojo0vd67vl27nqrrmv73gnsm.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
