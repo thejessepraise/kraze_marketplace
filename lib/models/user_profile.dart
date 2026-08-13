@@ -11,6 +11,8 @@ class UserProfile {
   final String phone;
   final String location;
   final String photoUrl; // empty string if none uploaded yet
+  final String language;
+  final DateTime? lastSeen;
   final DateTime? createdAt;
 
   const UserProfile({
@@ -20,6 +22,8 @@ class UserProfile {
     this.phone = '',
     this.location = '',
     this.photoUrl = '',
+    this.language = 'English',
+    this.lastSeen,
     this.createdAt,
   });
 
@@ -32,6 +36,8 @@ class UserProfile {
       phone: (data['phone'] as String?) ?? '',
       location: (data['location'] as String?) ?? '',
       photoUrl: (data['photoUrl'] as String?) ?? '',
+      language: (data['language'] as String?) ?? 'English',
+      lastSeen: (data['lastSeen'] as Timestamp?)?.toDate(),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
     );
   }
@@ -43,6 +49,8 @@ class UserProfile {
       'phone': phone,
       'location': location,
       'photoUrl': photoUrl,
+      'language': language,
+      'lastSeen': lastSeen != null ? Timestamp.fromDate(lastSeen!) : FieldValue.serverTimestamp(),
     };
   }
 
@@ -51,6 +59,8 @@ class UserProfile {
     String? phone,
     String? location,
     String? photoUrl,
+    String? language,
+    DateTime? lastSeen,
   }) {
     return UserProfile(
       uid: uid,
@@ -59,7 +69,15 @@ class UserProfile {
       phone: phone ?? this.phone,
       location: location ?? this.location,
       photoUrl: photoUrl ?? this.photoUrl,
+      language: language ?? this.language,
+      lastSeen: lastSeen ?? this.lastSeen,
       createdAt: createdAt,
     );
+  }
+
+  bool get isOnline {
+    if (lastSeen == null) return false;
+    // Consider online if active in the last 5 minutes
+    return DateTime.now().difference(lastSeen!).inMinutes < 5;
   }
 }

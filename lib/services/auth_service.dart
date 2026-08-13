@@ -85,10 +85,20 @@ class AuthService {
       // On Android/iOS, initialize the current google_sign_in 7.x API
       // before attempting authentication.
       final googleSignIn = GoogleSignIn.instance;
+      
+      // Attempting to initialize without parameters.
+      // NOTE: On some Android setups, you might need to pass clientId or 
+      // serverClientId to .initialize() if the plugin doesn't find them automatically.
       await googleSignIn.initialize();
 
+      // Trigger the interactive sign-in flow.
       final googleUser = await googleSignIn.authenticate();
-      final googleAuth = googleUser.authentication;
+      
+      if (googleUser == null) {
+        return null; // Student cancelled the sign-in
+      }
+
+      final googleAuth = await googleUser.authentication;
       final idToken = googleAuth.idToken;
 
       if (idToken == null || idToken.isEmpty) {
@@ -126,6 +136,14 @@ class AuthService {
         return null;
       }
       throw AuthException('Google sign-in failed. Please try again.');
+    }
+  }
+
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email.trim());
+    } on FirebaseAuthException catch (e) {
+      throw AuthException(_friendlyMessage(e));
     }
   }
 

@@ -26,7 +26,15 @@ class ProfileService {
       'phone': '',
       'location': '',
       'photoUrl': '',
+      'language': 'English',
+      'lastSeen': FieldValue.serverTimestamp(),
       'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> updatePresence(String uid) {
+    return _users.doc(uid).update({
+      'lastSeen': FieldValue.serverTimestamp(),
     });
   }
 
@@ -39,11 +47,13 @@ class ProfileService {
     String? name,
     String? phone,
     String? location,
+    String? language,
   }) {
     final update = <String, dynamic>{};
     if (name != null) update['name'] = name;
     if (phone != null) update['phone'] = phone;
     if (location != null) update['location'] = location;
+    if (language != null) update['language'] = language;
     if (update.isEmpty) return Future.value();
     return _users.doc(uid).update(update);
   }

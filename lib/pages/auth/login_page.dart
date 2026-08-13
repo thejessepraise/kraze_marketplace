@@ -10,6 +10,8 @@ import '../home/home_page.dart';
 import 'auth_widgets.dart';
 import 'signup_page.dart';
 
+import 'forgot_password_page.dart';
+
 /// The Login screen — a returning student signs back in.
 ///
 /// WHY StatefulWidget:
@@ -235,10 +237,9 @@ class _LoginPageState extends State<LoginPage> {
                     Center(
                       child: TextButton(
                         onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content:
-                                  Text('Forgot Password page coming soon'),
+                          Navigator.of(context).push(
+                            KrazePageRoute(
+                              builder: (_) => const ForgotPasswordPage(),
                             ),
                           );
                         },

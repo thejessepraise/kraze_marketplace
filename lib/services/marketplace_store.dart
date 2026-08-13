@@ -11,6 +11,7 @@ import 'package:kraze_student_marketplace/models/product.dart';
 import 'package:kraze_student_marketplace/models/user_profile.dart';
 import 'package:kraze_student_marketplace/services/profile_service.dart';
 
+import 'package:kraze_student_marketplace/constants/translations.dart';
 import 'package:kraze_student_marketplace/models/review.dart';
 
 /// Central app state, now backed by Firestore instead of an in-memory
@@ -34,6 +35,7 @@ class MarketplaceStore extends ChangeNotifier {
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _favoritesSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _conversationsSub;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _profileSub;
+  Timer? _presenceTimer;
 
   String? get _uid => FirebaseAuth.instance.currentUser?.uid;
 
@@ -89,6 +91,11 @@ class MarketplaceStore extends ChangeNotifier {
 
   UserProfile? get currentProfile => _profile;
 
+  String tr(String key) {
+    final lang = _profile?.language ?? 'English';
+    return kTranslations[lang]?[key] ?? key;
+  }
+
   Future<UserProfile?> getUserProfile(String uid) async {
     final doc = await _firestore.collection('users').doc(uid).get();
     if (!doc.exists) return null;
@@ -119,6 +126,7 @@ class MarketplaceStore extends ChangeNotifier {
     _favoritesSub?.cancel();
     _conversationsSub?.cancel();
     _profileSub?.cancel();
+    _presenceTimer?.cancel();
 
     if (user == null) {
       _favoriteIds = {};
@@ -127,6 +135,12 @@ class MarketplaceStore extends ChangeNotifier {
       notifyListeners();
       return;
     }
+
+    // Update presence immediately and then every 2 minutes
+    _updatePresence(user.uid);
+    _presenceTimer = Timer.periodic(const Duration(minutes: 2), (_) {
+      _updatePresence(user.uid);
+    });
 
     _favoritesSub = _firestore
         .collection('users')
@@ -181,6 +195,10 @@ class MarketplaceStore extends ChangeNotifier {
             notifyListeners();
           }
         });
+  }
+
+  void _updatePresence(String uid) {
+    _profileService.updatePresence(uid);
   }
 
   Conversation _conversationFromDoc(
@@ -539,7 +557,12 @@ class MarketplaceStore extends ChangeNotifier {
             snapshot.docs.map((doc) => Review.fromDoc(doc)).toList());
   }
 
-  Future<void> updateProfile({String? name, String? phone, String? location}) async {
+  Future<void> updateProfile({
+    String? name,
+    String? phone,
+    String? location,
+    String? language,
+  }) async {
     final uid = _uid;
     if (uid == null) return;
     await _profileService.updateProfile(
@@ -547,6 +570,7 @@ class MarketplaceStore extends ChangeNotifier {
       name: name,
       phone: phone,
       location: location,
+      language: language,
     );
   }
 
@@ -562,6 +586,7 @@ class MarketplaceStore extends ChangeNotifier {
     _favoritesSub?.cancel();
     _conversationsSub?.cancel();
     _profileSub?.cancel();
+    _presenceTimer?.cancel();
     super.dispose();
   }
 }

@@ -146,9 +146,9 @@ class _MarketplaceTab extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                const Flexible(
+                Flexible(
                   child: Text(
-                    'Marketplace',
+                    marketplaceStore.tr('marketplace'),
                     style: AppTextStyles.sectionTitle,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -225,7 +225,7 @@ class _MarketplaceTab extends StatelessWidget {
               Icon(Icons.search, color: colorScheme.onSurfaceVariant),
               const SizedBox(width: 10),
               Text(
-                'Search textbooks, laptops, phones...',
+                marketplaceStore.tr('search_hint'),
                 style: TextStyle(color: colorScheme.onSurfaceVariant),
               ),
             ],
@@ -277,7 +277,9 @@ class _MarketplaceTab extends StatelessWidget {
 
   Widget _buildSectionHeader(BuildContext context, int count) {
     final colorScheme = Theme.of(context).colorScheme;
-    final title = selectedCategory == 'All' ? 'Recent Listings' : selectedCategory;
+    final title = selectedCategory == 'All'
+        ? marketplaceStore.tr('recent_listings')
+        : selectedCategory;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
       child: Row(
