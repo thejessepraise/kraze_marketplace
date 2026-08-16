@@ -206,16 +206,22 @@ class ProductDetailPage extends StatelessWidget {
         const SizedBox(height: 10),
         Row(
           children: [
-            Text(
-              'GH₵${product.price.toStringAsFixed(2)}',
-              style: const TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: AppColors.accentPrice,
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'GH₵${product.price.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.accentPrice,
+                  ),
+                ),
               ),
             ),
-            const Spacer(),
             if (product.reviewCount > 0) ...[
+              const SizedBox(width: 16),
               const Icon(Icons.star, color: Colors.amber, size: 20),
               const SizedBox(width: 4),
               Text(

@@ -30,6 +30,8 @@ class MarketplaceStore extends ChangeNotifier {
   Set<String> _favoriteIds = {};
   List<Conversation> _conversations = [];
   UserProfile? _profile;
+  final Map<String, UserProfile> _profileCache = {};
+  final Map<String, Future<UserProfile?>> _profileFutures = {};
 
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _productsSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _favoritesSub;
@@ -97,9 +99,22 @@ class MarketplaceStore extends ChangeNotifier {
   }
 
   Future<UserProfile?> getUserProfile(String uid) async {
-    final doc = await _firestore.collection('users').doc(uid).get();
-    if (!doc.exists) return null;
-    return UserProfile.fromDoc(doc);
+    if (_profileCache.containsKey(uid)) return _profileCache[uid];
+    if (_profileFutures.containsKey(uid)) return _profileFutures[uid];
+
+    final future = _firestore.collection('users').doc(uid).get().then((doc) {
+      if (!doc.exists) {
+        _profileFutures.remove(uid);
+        return null;
+      }
+      final profile = UserProfile.fromDoc(doc);
+      _profileCache[uid] = profile;
+      _profileFutures.remove(uid);
+      return profile;
+    });
+
+    _profileFutures[uid] = future;
+    return future;
   }
 
   void _onAuthChanged(User? user) {
@@ -239,6 +254,7 @@ class MarketplaceStore extends ChangeNotifier {
           ? const []
           : [
               ChatMessage(
+                id: 'last',
                 text: lastText,
                 sentAt: lastAt ?? DateTime.now(),
                 isMine: lastSenderId == uid,
@@ -438,12 +454,12 @@ class MarketplaceStore extends ChangeNotifier {
     await docRef.update({field: FieldValue.serverTimestamp()});
   }
 
-  Future<void> sendMessage(String conversationId, String text) async {
+  Future<void> sendMessage(String conversationId, String text, {String type = 'text', String? imageUrl}) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
     final trimmedText = text.trim();
-    if (trimmedText.isEmpty) return;
+    if (trimmedText.isEmpty && imageUrl == null) return;
 
     final convRef = _firestore.collection('conversations').doc(conversationId);
     final batch = _firestore.batch();
@@ -453,6 +469,8 @@ class MarketplaceStore extends ChangeNotifier {
       'text': trimmedText,
       'senderId': user.uid,
       'sentAt': FieldValue.serverTimestamp(),
+      'type': type,
+      'imageUrl': imageUrl,
     });
 
     final doc = await convRef.get();
@@ -460,14 +478,25 @@ class MarketplaceStore extends ChangeNotifier {
     final isSeller = data['sellerId'] == user.uid;
     final readField = isSeller ? 'sellerLastReadAt' : 'buyerLastReadAt';
 
+    final lastMessageText = type == 'image' ? 'Sent a photo' : trimmedText;
+
     batch.update(convRef, {
-      'lastMessageText': trimmedText,
+      'lastMessageText': lastMessageText,
       'lastMessageSenderId': user.uid,
       'lastMessageAt': FieldValue.serverTimestamp(),
       readField: FieldValue.serverTimestamp(),
     });
 
     await batch.commit();
+  }
+
+  Future<void> sendImage(String conversationId, XFile imageFile) async {
+    // Store custom image as a compressed Base64 string to keep it free.
+    final bytes = await imageFile.readAsBytes();
+    final base64String = base64Encode(bytes);
+    final imageUrl = 'data:image/jpeg;base64,$base64String';
+    
+    await sendMessage(conversationId, '', type: 'image', imageUrl: imageUrl);
   }
 
   Future<void> deleteConversation(String conversationId) async {
@@ -485,6 +514,17 @@ class MarketplaceStore extends ChangeNotifier {
     await batch.commit();
   }
 
+  Future<void> deleteMessages(String conversationId, List<String> messageIds) async {
+    final convRef = _firestore.collection('conversations').doc(conversationId);
+    final batch = _firestore.batch();
+    
+    for (final id in messageIds) {
+      batch.delete(convRef.collection('messages').doc(id));
+    }
+
+    await batch.commit();
+  }
+
   Stream<List<ChatMessage>> watchMessages(String conversationId) {
     final uid = _uid;
     return _firestore
@@ -496,9 +536,12 @@ class MarketplaceStore extends ChangeNotifier {
           final list = snapshot.docs.map((doc) {
             final data = doc.data();
             return ChatMessage(
+              id: doc.id,
               text: (data['text'] as String?) ?? '',
               sentAt: (data['sentAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
               isMine: data['senderId'] == uid,
+              type: (data['type'] as String?) ?? 'text',
+              imageUrl: data['imageUrl'] as String?,
             );
           }).toList();
 

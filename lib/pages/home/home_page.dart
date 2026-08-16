@@ -8,6 +8,7 @@ import 'package:kraze_student_marketplace/widgets/bottom_nav_bar.dart';
 import 'package:kraze_student_marketplace/widgets/kraze_page_route.dart';
 import 'package:kraze_student_marketplace/widgets/product_grid.dart';
 import 'package:kraze_student_marketplace/widgets/product_image.dart';
+import 'package:kraze_student_marketplace/widgets/language_selector_sheet.dart';
 import 'package:kraze_student_marketplace/pages/chat/messages_page.dart';
 import 'package:kraze_student_marketplace/pages/favorites/favorites_page.dart';
 import 'package:kraze_student_marketplace/pages/post_item/post_item_page.dart';
@@ -173,6 +174,12 @@ class _MarketplaceTab extends StatelessWidget {
                 },
               ),
               const SizedBox(width: 4),
+              IconButton(
+                icon: const Icon(Icons.language_outlined),
+                onPressed: () => LanguageSelectorSheet.show(context),
+                tooltip: marketplaceStore.tr('language'),
+              ),
+              const SizedBox(width: 4),
               InkWell(
                 onTap: onProfileTap,
                 borderRadius: BorderRadius.circular(24),
@@ -253,7 +260,7 @@ class _MarketplaceTab extends StatelessWidget {
           final category = categories[index];
           final selected = category.name == selectedCategory;
           return ChoiceChip(
-            label: Text(category.name),
+            label: Text(marketplaceStore.tr('cat_${category.name}')),
             selected: selected,
             onSelected: (_) => onCategorySelected(category.name),
             selectedColor: colorScheme.primary,

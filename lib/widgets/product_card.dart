@@ -151,17 +151,24 @@ class ProductCard extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'GH₵${product.price.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.accentPrice,
+                      Flexible(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            'GH₵${product.price.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.accentPrice,
+                            ),
+                          ),
                         ),
                       ),
                       if (product.reviewCount > 0)
                         Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
+                            const SizedBox(width: 4),
                             const Icon(Icons.star, color: Colors.amber, size: 14),
                             const SizedBox(width: 2),
                             Text(

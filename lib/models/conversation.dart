@@ -1,13 +1,19 @@
 class ChatMessage {
   const ChatMessage({
+    required this.id,
     required this.text,
     required this.sentAt,
     required this.isMine,
+    this.type = 'text',
+    this.imageUrl,
   });
 
+  final String id;
   final String text;
   final DateTime sentAt;
   final bool isMine;
+  final String type; // 'text' or 'image'
+  final String? imageUrl;
 }
 
 class Conversation {
